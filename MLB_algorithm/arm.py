@@ -123,8 +123,3 @@ class BernoulliArm(Arm):
         Extracts rewards from Bernoulli distribution.
         """
         return bernoulli.rvs(self.p, size=size)
-
-
-if __name__ == "__main__":
-    arm = BernoulliArm(1, 0.5)
-    print(arm._get_rewards(1))

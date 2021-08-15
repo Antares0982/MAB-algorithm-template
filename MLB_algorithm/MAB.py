@@ -1,7 +1,5 @@
 from typing import Callable, Iterator, List, Optional
 
-import numpy as np
-
 from .arm import *
 
 
@@ -94,7 +92,6 @@ class MABAlgorithm(object):
         """
         if number_of_iterations < 1:
             raise ValueError("Number of iterations must be positive")
-
 
         number_of_arms = len(self._arms)
 
@@ -208,7 +205,7 @@ class DSEE(MABAlgorithm):
         """
         explore = self._explore_iters.__next__()
         if explore:
-            self.explore_sum+=1
+            self.explore_sum += 1
             chosen_arm_index = int(np.argmin(self._exploration))
             self._exploration[chosen_arm_index] += 1
             return chosen_arm_index
