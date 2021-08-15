@@ -106,11 +106,6 @@ class MABAlgorithm(object):
 
         expected_rewards = 0.0
 
-        # rewards = np.zeros([number_of_arms, self._iterations])
-
-        # for arm_index in range(0, number_of_arms):
-        #     rewards[arm_index] = self._arms[arm_index].draw(self._iterations)
-
         for iteration in range(0, number_of_iterations):
             chosen_arm_index = self.select_arm(
                 count=iteration,
@@ -122,9 +117,9 @@ class MABAlgorithm(object):
 
             collected_rewards += reward
             expected_rewards += self._arms[chosen_arm_index].optimal_rewards()
-            #optimal_strategy_rewards += np.max(rewards[:, iteration])
+
             optimal_strategy_rewards += optimal_arm_rewards
-            # regret = optimal_strategy_rewards - collected_rewards
+
             regret = optimal_strategy_rewards - expected_rewards
 
             ans = {"iteration": iteration, "chosen_arm": self._arms[chosen_arm_index].name,
