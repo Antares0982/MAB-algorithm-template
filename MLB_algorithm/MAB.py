@@ -5,6 +5,7 @@ from .arm import *
 
 class MABAlgorithm(object):
     """
+    Base class of a multi-armed bandit algorithm for inheritance.
     Multi-armed bandit - In probability theory, the multi-armed bandit problem (sometimes called the K- or N-armed
     bandit problem) is a problem in which a fixed limited set of resources must be allocated between competing
     (alternative) choices in a way that maximizes their expected gain, when each choice's properties are only partially

@@ -7,12 +7,13 @@ from scipy.stats._discrete_distns import bernoulli
 
 class Arm(object):
     def __init__(self, name: Union[str, int]) -> None:
-        """Base class for an arm."""
+        """Base class of an arm of bandit for inheritance."""
         self.__name = name
 
     @property
     def name(self):
-        """Name of the arm.
+        """
+        Name of the arm.
         The name is defined in __init__() and should not be changed.
         """
         return self.__name
@@ -26,7 +27,7 @@ class Arm(object):
         Returns:
             :obj:`numpy.ndarray`: List of rewards.
 
-        This method is intended for override by subclasses and should not be called externally.
+        This method is intended for overriden by subclasses and should not be called externally.
         """
         raise NotImplementedError
 
@@ -70,6 +71,8 @@ class TruncNormArm(Arm):
     """
 
     def __init__(self, name: Union[str, int], mu: float, sigma: float) -> None:
+        if sigma <= 0:
+            raise ValueError("Sigma should be positive")
         super().__init__(name)
         self.__mu = mu
         self.__sigma = sigma
@@ -90,11 +93,6 @@ class TruncNormArm(Arm):
                                moments="m")
 
     def _get_rewards(self, size: int) -> np.ndarray:
-        """
-        Extracts rewards from Normal distribution. SUPPORT ON [0,1]
-        :param size: number of draws.
-        :return: rewards.
-        """
         return truncnorm.rvs((0 - self.__mu) / self.__sigma,
                              (1 - self.__mu) / self.__sigma,
                              self.__mu,
@@ -108,6 +106,8 @@ class BernoulliArm(Arm):
     """
 
     def __init__(self, name: Union[str, int], p: float) -> None:
+        if p < 0 or p > 1:
+            raise ValueError("p should be between 0 and 1")
         super().__init__(name)
         self.__p = p
 
@@ -119,7 +119,4 @@ class BernoulliArm(Arm):
         return self.p
 
     def _get_rewards(self, size: int) -> np.ndarray:
-        """
-        Extracts rewards from Bernoulli distribution.
-        """
         return bernoulli.rvs(self.p, size=size)
