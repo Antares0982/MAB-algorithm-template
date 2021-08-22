@@ -1,8 +1,14 @@
-from typing import Union, overload
+from typing import List, Tuple, Union, overload
 
 import numpy as np
 from scipy.stats._continuous_distns import truncnorm
 from scipy.stats._discrete_distns import bernoulli
+
+__all__ = [
+    "Arm",
+    "TruncNormArm",
+    "BernoulliArm"
+]
 
 
 class Arm(object):
@@ -27,7 +33,8 @@ class Arm(object):
         Returns:
             :obj:`numpy.ndarray`: List of rewards.
 
-        This method is intended for overriden by subclasses and should not be called externally.
+        This method is intended for overriden by subclasses and should not be called
+        externally.
         """
         raise NotImplementedError
 
@@ -43,8 +50,9 @@ class Arm(object):
         """Get rewards.
 
         Args:
-            size (:obj:`int`, optional): Number of draws. If is `None`, then draw once and returns a float.
-                Else the method returns a list of rewards of each draw.
+            size (:obj:`int`, optional): Number of draws. If is `None`, then draw once
+                and returns a float. Else the method returns a list of rewards of each
+                draw.
 
         Returns:
             :obj:`numpy.ndarray` | :obj:`int`: Reward(s).
@@ -120,3 +128,79 @@ class BernoulliArm(Arm):
 
     def _get_rewards(self, size: int) -> np.ndarray:
         return bernoulli.rvs(self.p, size=size)
+
+
+class armList(object):
+    """
+    This class only contains functions that useful to a list of `Arm` objects.
+    Should not initialize an instance of this class.
+    """
+    @staticmethod
+    def get_optimal_arm_index(arms: List[Arm]) -> int:
+        if not arms:
+            raise ValueError("There is no arm.")
+
+        return np.argmax(x.optimal_rewards() for x in arms)
+
+    @staticmethod
+    def get_optimal_arm_rewards(arms: List[Arm]) -> int:
+        ind = armList.get_optimal_arm_index(arms)
+        return arms[ind].optimal_rewards()
+
+    @staticmethod
+    def get_optimal_arm_index_and_rewards(arms: List[Arm]) -> Tuple[int, float]:
+        ind = armList.get_optimal_arm_index(arms)
+        return ind, arms[ind].optimal_rewards()
+
+    @staticmethod
+    def get_nth_arm_index_and_rewards(arms: List[Arm], *indexes: int) -> Tuple[Tuple[int, float], ...]:
+        """
+        Returns the n-th optimal arm index and rewards.
+
+        Args:
+            arms (:obj:`List[Arm]`): List of `Arms` object.
+            indexes (:obj:`Tuple[int]`): One index or indexes of arms sorted by optimal
+                rewards.
+
+        Returns:
+            `Tuple[Tuple[int, float], ...]`: Tuple of `(index, rewards)`.
+
+        Raises:
+            ValueError: If number of arms is less than 2, or the index argument is
+                over bounded.
+        """
+        if len(arms) < 2:
+            raise ValueError("Should have at least 2 arms.")
+        for arg in indexes:
+            if arg >= len(arms):
+                raise ValueError(
+                    "Index of sorted list should not be greater than length of arms")
+        lst = [(i, float(arms[i].optimal_rewards())) for i in range(len(arms))]
+        lst.sort(key=lambda x: x[1], reverse=True)
+
+        return tuple(lst[x] for x in indexes)
+
+    @staticmethod
+    def get_nth_arm_index(arms: List[Arm], *indexes: int) -> Tuple[int]:
+        """
+        Returns the n-th optimal arm index.
+
+        Args:
+            arms (:obj:`List[Arm]`): List of `Arms` object.
+            indexes (:obj:`Tuple[int]`): One index or indexes of arms sorted by optimal
+                rewards.
+
+        Returns:
+            `Tuple[int]`: Tuple of `index`.
+
+        Raises:
+            ValueError: If number of arms is less than 2, or the index argument is
+                over bounded.
+        """
+        dum = armList.get_nth_arm_index_and_rewards(arms, *indexes)
+        return tuple(x[0] for x in dum)
+
+    @staticmethod
+    def get_nth_suboptimal_arm_rewards(arms: List[Arm], *indexes: int) -> Tuple[float]:
+        dum = armList.get_nth_arm_index_and_rewards(arms, *indexes)
+        return tuple(x[0] for x in dum)

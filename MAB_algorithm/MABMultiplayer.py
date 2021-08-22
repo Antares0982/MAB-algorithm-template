@@ -1,6 +1,7 @@
-from typing import Dict, Set
+from typing import Dict, Set, List
 
-from MAB import *
+from .MAB import *
+from .arm import *
 
 
 class MABMultiplayer(MABAlgorithm):
@@ -51,11 +52,11 @@ class MABMultiplayer(MABAlgorithm):
             count (:obj:`int`): current number of draws.
             mean_estimator (:obj:`function`, optional) gives the mean estimator to select arms.
                 Generally, this function is not needed, since the algorithm should
-                implement the property :attr:`mean`. One should define this function
+                implement the property :property:`mean`. One should define this function
                 if algorithm needs two mean estimator, or the arithmetic mean needs to be
                 retained.
             other (`Any`): Any keyword argument needed. If needed, one should also
-                override :attr:`run_simulation()`.
+                override :method:`run_simulation()`.
 
         Returns:
             :obj:`int`: index of chosen arm.
@@ -91,4 +92,4 @@ class MABMultiplayer(MABAlgorithm):
                 if chosen_arm_index not in arm_selection_player_map:
                     arm_selection_player_map[chosen_arm_index] = set()
                 arm_selection_player_map[chosen_arm_index].add(player)
-        pass # TODO
+        pass  # TODO
