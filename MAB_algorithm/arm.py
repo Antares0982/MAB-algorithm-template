@@ -7,7 +7,8 @@ from scipy.stats._discrete_distns import bernoulli
 __all__ = [
     "Arm",
     "TruncNormArm",
-    "BernoulliArm"
+    "BernoulliArm",
+    "armList"
 ]
 
 

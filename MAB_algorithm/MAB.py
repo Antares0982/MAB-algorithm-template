@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Callable, Iterator, List, Optional, overload
+from typing import TYPE_CHECKING, Callable, List, Optional, overload
 
 import numpy as np
 
@@ -160,7 +160,7 @@ class MABAlgorithm(object):
             "collected_rewards_per_step": self.collected_rewards / (iteration + 1)
         }
 
-    def run_simulation(self, number_of_iterations: int) -> Iterator[dict]:
+    def run_simulation(self, number_of_iterations: int):
         """
         Run simulation and update the probabilities to pull for each arm.
         The method :method:`select_arm` should be defined in subclasses in order to call
@@ -183,7 +183,7 @@ class MABAlgorithm(object):
             number_of_iterations (:obj:`int`): Number of iteration steps.
 
         Returns:
-            :obj:`Iterator[dict]`: An iterator yielding meta data of each iteration.
+            :obj:`Generator[dict]`: An iterator yielding meta data of each iteration.
 
         Yields:
             :obj:`Dict[str, float | int | str]`: Meta data of each iteration. For the
@@ -243,7 +243,7 @@ class DSEE(MABAlgorithm):
         super().__init__(arms)
         self._exploration = [0]*len(arms)
         self.__w = w
-        self._explore_iters: Iterator[bool] = self.generate_exploration(
+        self._explore_iters = self.generate_exploration(
             len(arms), w)
         self.explore_sum = 0
 
@@ -259,7 +259,7 @@ class DSEE(MABAlgorithm):
         self.__w = ww
 
     @staticmethod
-    def generate_exploration(number_of_arms: int, w: float) -> Iterator[bool]:
+    def generate_exploration(number_of_arms: int, w: float):
         """
         DSEE exploration sequence. The iteration will not stop automately.
 

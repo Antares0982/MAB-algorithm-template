@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, Iterator, List, Type, Union
+from typing import TYPE_CHECKING, Dict, Generator, Iterator, List, Type, Union
 
 import numpy as np
 
@@ -46,9 +46,11 @@ class MAB_MonteCarlo(object):
                 continue
             if key == "chosen_arm":
                 ans["optimal_arm_chosen_possibility"] = np.count_nonzero(
-                    x[key] == self._optimal_arm_index for x in data)/len(data)
+                    [x[key] == self._optimal_arm_index for x in data])/len(data)
                 continue
-            ans["avg_"+key] = np.average(x[key] for x in data)
+            
+            ans["avg_"+key] = np.mean([x[key] for x in data])
+        return ans
 
     def run_monte_carlo(self, repeatTimes: int, iterations: int, needDetails: bool = False):
         if repeatTimes < 1:
@@ -68,8 +70,7 @@ class MAB_MonteCarlo(object):
             ]
 
         for _ in range(iterations):
-            data: List[dict] = list(
-                map(Iterator.__next__, self.monte_carlo_iters))
+            data = [x.__next__() for x in self.monte_carlo_iters]
             ans = self.monte_carlo_avg_result(data)
             if needDetails:
                 ans["details"] = data
