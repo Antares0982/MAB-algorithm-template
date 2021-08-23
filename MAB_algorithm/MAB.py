@@ -7,7 +7,8 @@ if TYPE_CHECKING:
 
 __all__ = [
     "MABAlgorithm",
-    "DSEE"
+    "DSEE",
+    "robustUCB"
 ]
 
 
@@ -54,11 +55,25 @@ class MABAlgorithm(object):
         if not arms:
             raise ValueError("There should be at least one arm")
         self._arms = arms
-        self._reward_sum = np.zeros(len(self._arms))
-        self._counts = np.zeros(len(self._arms))
-        self.reset_variables()
+        self._reset_variables()
 
-    def reset_variables(self):
+    def _init(self, *args, **kwargs):
+        """
+        Initialize all user defined attributes here.
+        """
+        ...
+
+    def restart(self, *args, **kwargs) -> None:
+        """
+        Algorithm restart. After calling this method, one can call `run_simulation()`
+        again to start a new iteration.
+
+        Override this method to restart an algorithm correctly. It is suggested that
+        use `super().restart()` at the beginning of the overriding one in subclasses.
+        """
+        self._reset_variables()
+
+    def _reset_variables(self):
         """
         Reset basic variables to `0.0`: :attr:`optimal_strategy_rewards`,
         :attr:`collected_rewards`, :attr:`optimal_strategy_rewards`,
@@ -67,6 +82,8 @@ class MABAlgorithm(object):
         Generally one should not override this method. To reset user defined
         variables, use :method:`restart()`
         """
+        self._reward_sum = np.zeros(len(self._arms))
+        self._counts = np.zeros(len(self._arms))
         self.optimal_strategy_rewards = 0.0
         self.collected_rewards = 0.0
         self.expected_rewards = 0.0
@@ -78,7 +95,9 @@ class MABAlgorithm(object):
         Default mean estimator, using arithmetic mean.
         Should be overriden if the algorithm defines another mean estimator.
         """
-        return [self._reward_sum[i]/self._counts[i] if self._counts[i] != 0 else np.NaN for i in range(len(self._arms))]
+        return np.array([
+            self._reward_sum[i]/self._counts[i] if self._counts[i] != 0 else np.NaN for i in range(len(self._arms))
+        ])
 
     @property
     def regret(self) -> float:
@@ -142,7 +161,7 @@ class MABAlgorithm(object):
         for arm in self._arms:
             if optimal_arm_rewards < arm.optimal_rewards():
                 optimal_arm_rewards = arm.optimal_rewards()
-        self.optimal_arm_rewards = optimal_arm_rewards
+        self.optimal_arm_rewards = float(optimal_arm_rewards)
 
     def _simulation_result_dict(self, iteration: int, chosen_arm_index: int) -> dict:
         """
@@ -192,8 +211,6 @@ class MABAlgorithm(object):
         if number_of_iterations < 1:
             raise ValueError("Number of iterations must be positive")
 
-        self.reset_variables()
-
         for iteration in range(number_of_iterations):
             chosen_arm_index = self.select_arm(
                 count=iteration,
@@ -209,15 +226,6 @@ class MABAlgorithm(object):
             yield self._simulation_result_dict(iteration, chosen_arm_index)
 
             self._after_draw(iteration, chosen_arm_index, reward)
-
-    def restart(self, *args, **kwargs) -> None:
-        """
-        Algorithm restart. After calling this method, one can call `run_simulation()`
-        again to start a new iteration.
-
-        Override this method to restart an algorithm correctly.
-        """
-        raise NotImplementedError
 
 
 class DSEE(MABAlgorithm):
@@ -241,11 +249,21 @@ class DSEE(MABAlgorithm):
 
     def __init__(self, arms: List['Arm'], w: float) -> None:
         super().__init__(arms)
-        self._exploration = [0]*len(arms)
-        self.__w = w
+        self._init(w)
+
+    def _init(self, w: float):
+        self._exploration = [0]*len(self._arms)
+        self.w = w
         self._explore_iters = self.generate_exploration(
-            len(arms), w)
+            len(self._arms), w)
         self.explore_sum = 0
+
+    def restart(self, w: float) -> None:
+        """
+        Algorithm restart with another parameter `w`.
+        """
+        super().restart()
+        self._init(w)
 
     @property
     def w(self):
@@ -269,21 +287,21 @@ class DSEE(MABAlgorithm):
                 If `number_of_exploration >= number_of_arms * ceil(w * log(n))`, then
                 exploit; else, explore.
         """
-        _count = 0
+        _t = 0
         _sum = 0
 
-        while _count < number_of_arms:
+        while _t < number_of_arms:
             yield True
-            _count += 1
+            _t += 1
             _sum += 1
 
         while True:
-            if _sum >= number_of_arms*np.ceil(w*np.log(_count+1)):
+            if _sum >= number_of_arms*np.ceil(w*np.log(_t+1)):
                 yield False
             else:
                 yield True
                 _sum += 1
-            _count += 1
+            _t += 1
 
     def select_arm(self, *args, **kwargs) -> int:
         """
@@ -303,11 +321,131 @@ class DSEE(MABAlgorithm):
 
         return int(np.argmax(mean))
 
-    def restart(self, w: float) -> None:
-        """
-        Algorithm restart with another parameter `w`.
-        """
-        self.w = w
-        self._explore_iters = self.generate_exploration(len(self._arms), w)
-        self.explore_sum = 0
-        self.reset_variables()
+
+class robustUCB(MABAlgorithm):
+    __slots__ = [
+        "__v",
+        "__tol",
+        "reward_history",
+        "_t",
+        "_last_catoni_mean",
+        "_psi"
+    ]
+
+    def __init__(self, arms: List['Arm'], v: float, tol: float = 1e-2, psi: Optional[Callable[..., float]] = None) -> None:
+        super().__init__(arms)
+        self._init(v, tol, psi)
+
+    def _init(self, v: float, tol: float = 1e-2, psi: Optional[Callable[..., float]] = None):
+        self.v = v
+        self.tol = tol
+        self.reward_history: List[List[float]] = [
+            [] for _ in range(len(self._arms))
+        ]
+        self._t = 1
+        self._last_catoni_mean = np.zeros(len(self._arms))
+        self._psi = psi
+
+    def restart(self, v: float, tol: float = 1e-2, psi: Optional[Callable[..., float]] = None) -> None:
+        super().restart()
+        self._init(v, tol, psi)
+
+    @property
+    def v(self) -> float:
+        return self.__v
+
+    @v.setter
+    def v(self, vv: float):
+        if vv <= 0:
+            raise ValueError("Parameter v should be positive")
+        self.__v = vv
+
+    @property
+    def tol(self) -> float:
+        return self.__tol
+
+    @tol.setter
+    def tol(self, tt: float):
+        if tt <= 0 or tt > 1:
+            raise ValueError(
+                "The tolerance should neither be negative nor too big")
+        self.__tol = tt
+
+    def alpha(self, delta: float, n: int):
+        lg1divd = np.log(1/delta)
+        v = self.v
+        return np.sqrt(2*lg1divd/(n*(v+2*v*lg1divd/(n-2*lg1divd))))
+
+    @staticmethod
+    def psi(x: float) -> float:
+        if x <= 1 and x >= -1:
+            return x-x*x*x/6
+        if x > 1:
+            return np.log(x)+5/6
+        return -np.log(-x)-5/6
+
+    def get_Catoni_mean(self, index: int) -> float:
+        t = self._t
+        delta = 1/(t*t)
+        n = len(self.reward_history[index])
+
+        guess0 = self._last_catoni_mean[index]
+        a = self._sum_psi(index, guess0, delta, n)
+
+        if a > 0:
+            while a > 0:
+                guess0 += 1
+                a = self._sum_psi(index, guess0, delta, n)
+            ans = self._find_root(index, delta, n, guess0-1, guess0)
+        else:
+            while a < 0:
+                guess0 -= 1
+                a = self._sum_psi(index, guess0, delta, n)
+            ans = self._find_root(index, delta, n, guess0, guess0+1)
+
+        self._last_catoni_mean[index] = ans
+        return ans
+
+    def _find_root(self, index: int, delta: float, n: int, a: float, b: float) -> float:
+        tol = self.tol
+        while b - a > tol:
+            guess = (b+a)/2
+            if self._sum_psi(index, guess, delta, n) > 0:
+                a = guess
+            else:
+                b = guess
+        return (a+b)/2
+
+    def _sum_psi(self, index: int, guess: float, delta, n) -> float:
+        alpha_d = self.alpha(delta, n)
+        if self._psi:
+            return sum(self._psi(alpha_d*(x-guess)) for x in self.reward_history[index])
+        return sum(self.psi(alpha_d*(x-guess)) for x in self.reward_history[index])
+
+    @property
+    def mean(self) -> List[float]:
+        if self._t <= len(self._arms):
+            ans = np.array(
+                [x[0] if x else np.NaN for x in self.reward_history]
+            )
+            return ans
+
+        ans = np.zeros(len(self._arms))
+        t = self._t
+
+        for i in range(len(self._arms)):
+            s = len(self.reward_history[i])
+            ans[i] = self.get_Catoni_mean(i)+2*np.sqrt(2*self.v*np.log(t)/s)
+        return ans
+
+    def select_arm(self, *args, **kwargs) -> int:
+        lgt_8 = 8*np.log(self._t)
+        for i in range(len(self._arms)):
+            if len(self.reward_history[i]) < lgt_8:
+                return i
+
+        return np.argmax(self.mean)
+
+    def _after_draw(self, iteration: int, chosen_arm_index: int, reward: float) -> None:
+        self._t += 1
+        self.reward_history[chosen_arm_index].append(reward)

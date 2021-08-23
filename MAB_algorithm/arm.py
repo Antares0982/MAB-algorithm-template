@@ -65,6 +65,9 @@ class Arm(object):
     def optimal_rewards(self) -> float:
         raise NotImplementedError
 
+    def variance(self) -> float:
+        raise NotImplementedError
+
     def get_dict(self) -> dict:
         """Return the arm values as dictionary with name and probability."""
         return {"name": self.name}
@@ -101,6 +104,13 @@ class TruncNormArm(Arm):
                                self.__sigma,
                                moments="m")
 
+    def variance(self) -> float:
+        return truncnorm.stats((0 - self.__mu) / self.__sigma,
+                               (1 - self.__mu) / self.__sigma,
+                               self.__mu,
+                               self.__sigma,
+                               moments="v")
+
     def _get_rewards(self, size: int) -> np.ndarray:
         return truncnorm.rvs((0 - self.__mu) / self.__sigma,
                              (1 - self.__mu) / self.__sigma,
@@ -126,6 +136,9 @@ class BernoulliArm(Arm):
 
     def optimal_rewards(self) -> float:
         return self.p
+
+    def variance(self) -> float:
+        return self.p*(1-self.p)
 
     def _get_rewards(self, size: int) -> np.ndarray:
         return bernoulli.rvs(self.p, size=size)
@@ -205,3 +218,7 @@ class armList(object):
     def get_nth_suboptimal_arm_rewards(arms: List[Arm], *indexes: int) -> Tuple[float]:
         dum = armList.get_nth_arm_index_and_rewards(arms, *indexes)
         return tuple(x[0] for x in dum)
+
+    @staticmethod
+    def getmaxVariance(arms: List[Arm]) -> float:
+        return np.max([x.variance() for x in arms])

@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING, Dict, Generator, Iterator, List, Type, Union
+from typing import TYPE_CHECKING, Dict, List, Type, Union
 
 import numpy as np
 
@@ -48,7 +48,7 @@ class MAB_MonteCarlo(object):
                 ans["optimal_arm_chosen_possibility"] = np.count_nonzero(
                     [x[key] == self._optimal_arm_index for x in data])/len(data)
                 continue
-            
+
             ans["avg_"+key] = np.mean([x[key] for x in data])
         return ans
 
