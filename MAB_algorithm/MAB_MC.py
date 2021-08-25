@@ -1,3 +1,5 @@
+import logging
+import time
 from typing import TYPE_CHECKING, Dict, List, Type, Union
 
 import numpy as np
@@ -27,6 +29,7 @@ class MAB_MonteCarlo(object):
         self.arms = arms
         self.kwargs = kwargs
         self._optimal_arm_index = self._get_optimal_arm_index()
+        self.logger = logging.getLogger(__name__)
 
     def _get_optimal_arm_index(self):
         ans = 0
@@ -48,8 +51,19 @@ class MAB_MonteCarlo(object):
                 ans["optimal_arm_chosen_possibility"] = np.count_nonzero(
                     [x[key] == self._optimal_arm_index for x in data])/len(data)
                 continue
-
-            ans["avg_"+key] = np.mean([x[key] for x in data])
+            dt = np.array([x[key] for x in data])
+            ans["avg_"+key] = np.mean(dt)
+            ans["var_"+key] = np.var(dt)
+            if self.logger:
+                a = np.count_nonzero(
+                    [np.abs(x-ans["avg_"+key]) > 3*ans["var_"+key] for x in dt])
+                if a/len(dt) > 0.003:
+                    self.logger.warning(
+                        f"""Algorithm: {self.algorithm}, with argument:{str(self.kwargs)}
+                            Too many samples' {key} are far from the average.
+                            There are {a} out of {len(dt)} samples are too far.
+                            Please check if the distribution of arms are heavy tailed,
+                            or the algorithm is not ideal.""")
         return ans
 
     def run_monte_carlo(self, repeatTimes: int, iterations: int, needDetails: bool = False):
@@ -60,18 +74,26 @@ class MAB_MonteCarlo(object):
         if self.kwargs:
             self.monte_carlo_iters = [
                 self.algorithm(
-                    self.arms, **self.kwargs).run_simulation(iterations)
+                    self.arms, loggerOn=False, **self.kwargs).run_simulation(iterations)
                 for _ in range(repeatTimes)
             ]
         else:
             self.monte_carlo_iters = [
-                self.algorithm(self.arms).run_simulation(iterations)
+                self.algorithm(
+                    self.arms, loggerOn=False).run_simulation(iterations)
                 for _ in range(repeatTimes)
             ]
 
-        for _ in range(iterations):
+        for it in range(iterations):
+            starttime = time.time()
             data = [x.__next__() for x in self.monte_carlo_iters]
             ans = self.monte_carlo_avg_result(data)
             if needDetails:
                 ans["details"] = data
+            endtime = time.time()
+            passedTime = int(100*(endtime-starttime))/100
+            if self.logger and passedTime > 5:
+                self.logger.warning(f"Single iteration took too long time;\n\
+                                    Took {passedTime} seconds at iteration: {it}")
+
             yield ans

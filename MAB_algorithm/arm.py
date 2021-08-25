@@ -4,6 +4,8 @@ import numpy as np
 from scipy.stats._continuous_distns import truncnorm
 from scipy.stats._discrete_distns import bernoulli
 
+from .distns import *
+
 __all__ = [
     "Arm",
     "TruncNormArm",
@@ -122,6 +124,9 @@ class TruncNormArm(Arm):
 class BernoulliArm(Arm):
     """
     An arm with Bernoulli distribution.
+
+    Args:
+        p (:obj:`float`): The possibility that the random variable is 1, else 0.
     """
 
     def __init__(self, name: Union[str, int], p: float) -> None:
@@ -142,6 +147,53 @@ class BernoulliArm(Arm):
 
     def _get_rewards(self, size: int) -> np.ndarray:
         return bernoulli.rvs(self.p, size=size)
+
+
+class heavyTailArm(Arm):
+    """
+    An arm with heavy tailed distribution, using translation of
+    `1/(x**(maxMomentOrder+1)*log(x)**2)` as pdf.
+
+    Note:
+        * The variance (or, moments) only depends on `maxMomentOrder`.
+        * For the case `maxMomentOrder < 2`, the distribution does not have finite variance.
+
+    Args:
+        maxMomentOrder (:ob:`float`): `maxMomentOrder` is the max order of finite moments. If
+            s>maxMomentOrder, the s-order moment is infinity. 
+        mean (:obj:`float`): The mean of distribution. Translate
+            `1/(x**(maxMomentOrder+1)*log(x)**2)` to make the mean of distribution equal `mean`.
+    """
+
+    def __init__(self, name: Union[str, int], maxMomentOrder: float, mean: float) -> None:
+        super().__init__(name)
+        if maxMomentOrder < 1:
+            raise ValueError("Mean of random variable must exist")
+        self.__maxMomentOrder = maxMomentOrder
+        self.__mean = mean
+        self._heavy_tail_random_var_gen = heavy_tail(maxMomentOrder, mean)
+
+    @property
+    def maxMomentOrder(self) -> float:
+        return self.__maxMomentOrder
+
+    @property
+    def mean(self) -> float:
+        return self.__mean
+
+    def _get_rewards(self, size: int) -> np.ndarray:
+        return self._heavy_tail_random_var_gen.rvs(size=size)
+
+    def optimal_rewards(self) -> float:
+        return self.mean
+
+    def variance(self) -> float:
+        """
+        The variance can be evaluated directly and accurately.
+        """
+        if self.maxMomentOrder < 2:
+            return np.Infinity
+        return self._heavy_tail_random_var_gen._variance
 
 
 class armList(object):

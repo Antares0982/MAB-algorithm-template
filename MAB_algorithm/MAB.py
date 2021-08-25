@@ -1,6 +1,9 @@
+import logging
 from typing import TYPE_CHECKING, Callable, List, Optional, overload
 
 import numpy as np
+
+from .MAButils import MAB_Nodes
 
 if TYPE_CHECKING:
     from .arm import Arm
@@ -45,16 +48,21 @@ class MABAlgorithm(object):
         "optimal_strategy_rewards",
         "collected_rewards",
         "expected_rewards",
-        "optimal_arm_rewards"
+        "optimal_arm_rewards",
+        "logger"
     ]
 
-    def __init__(self, arms: List['Arm']) -> None:
+    def __init__(self, arms: List['Arm'], loggerOn: bool = True) -> None:
         """
         Default initialization method of an Multi-armed bandit algorithm.
         """
         if not arms:
             raise ValueError("There should be at least one arm")
         self._arms = arms
+        if loggerOn:
+            self.logger: Optional[logging.Logger] = logging.getLogger(__name__)
+        else:
+            self.logger = None
         self._reset_variables()
 
     def _init(self, *args, **kwargs):
@@ -247,8 +255,8 @@ class DSEE(MABAlgorithm):
         "explore_sum"
     ]
 
-    def __init__(self, arms: List['Arm'], w: float) -> None:
-        super().__init__(arms)
+    def __init__(self, arms: List['Arm'], w: float, loggerOn: bool = True) -> None:
+        super().__init__(arms, loggerOn=loggerOn)
         self._init(w)
 
     def _init(self, w: float):
@@ -329,26 +337,53 @@ class robustUCB(MABAlgorithm):
         "reward_history",
         "_t",
         "_last_catoni_mean",
-        "_psi"
+        "_psi",
+        "_dpsi"
     ]
 
-    def __init__(self, arms: List['Arm'], v: float, tol: float = 1e-2, psi: Optional[Callable[..., float]] = None) -> None:
-        super().__init__(arms)
-        self._init(v, tol, psi)
+    def __init__(
+            self,
+            arms: List['Arm'],
+            v: float,
+            tol: float = 1e-2,
+            psi: Optional[Callable[..., float]] = None,
+            dpsi: Optional[Callable[..., float]] = None,
+            loggerOn: bool = True
+    ) -> None:
+        super().__init__(arms, loggerOn=loggerOn)
+        self._init(v, tol, psi, dpsi)
 
-    def _init(self, v: float, tol: float = 1e-2, psi: Optional[Callable[..., float]] = None):
+    def _init(
+        self,
+        v: float,
+        tol: float = 1e-2,
+        psi: Optional[Callable[..., float]] = None,
+        dpsi: Optional[Callable[..., float]] = None
+    ):
         self.v = v
         self.tol = tol
-        self.reward_history: List[List[float]] = [
-            [] for _ in range(len(self._arms))
+        self.reward_history: List[MAB_Nodes] = [
+            MAB_Nodes() for _ in range(len(self._arms))
         ]
         self._t = 1
         self._last_catoni_mean = np.zeros(len(self._arms))
         self._psi = psi
+        self._dpsi = None
+        if psi is not None:
+            if dpsi is None:
+                raise ValueError(
+                    "If psi is given, the derivative of psi should also be given.")
+            self._dpsi = dpsi
 
-    def restart(self, v: float, tol: float = 1e-2, psi: Optional[Callable[..., float]] = None) -> None:
+    def restart(
+        self,
+        v: float,
+        tol: float = 1e-2,
+        psi: Optional[Callable[..., float]] = None,
+        dpsi: Optional[Callable[..., float]] = None
+    ) -> None:
         super().restart()
-        self._init(v, tol, psi)
+        self._init(v, tol, psi, dpsi)
 
     @property
     def v(self) -> float:
@@ -371,81 +406,118 @@ class robustUCB(MABAlgorithm):
                 "The tolerance should neither be negative nor too big")
         self.__tol = tt
 
-    def alpha(self, delta: float, n: int):
-        lg1divd = np.log(1/delta)
+    def alpha(self, n: int):
+        lg1divdm2 = 4*np.log(self._t)
         v = self.v
-        return np.sqrt(2*lg1divd/(n*(v+2*v*lg1divd/(n-2*lg1divd))))
+        print("lg1divdm2:", lg1divdm2)
+        print("v:", self.v)
+        print("n:", n)
+        print("sq:", lg1divdm2/(n*()))
+        v+v*lg1divdm2/(n-lg1divdm2)
+        ans = np.sqrt(lg1divdm2/(n*(v+v*lg1divdm2/(n-lg1divdm2))))
+        print("alpha:", ans)
+        return ans
 
     @staticmethod
     def psi(x: float) -> float:
         if x <= 1 and x >= -1:
             return x-x*x*x/6
         if x > 1:
-            return np.log(x)+5/6
-        return -np.log(-x)-5/6
+            return np.log(2*x-1)/4+5/6
+        return -np.log(-2*x-1)/4-5/6
+
+    @staticmethod
+    def dpsi(x: float) -> float:
+        if x <= 1 and x >= -1:
+            return 1-x*x/2
+        if x > 1:
+            return 1/(4*x-2)
+        return -1/(4*x+2)
+
+    def newton_iter(self, index: int, x: float) -> float:
+        n = len(self.reward_history[index])
+        return x - self._sum_psi(index, x)/self._d_sum_psi(index, x)
 
     def get_Catoni_mean(self, index: int) -> float:
-        t = self._t
-        delta = 1/(t*t)
         n = len(self.reward_history[index])
 
-        guess0 = self._last_catoni_mean[index]
-        a = self._sum_psi(index, guess0, delta, n)
+        guess = self._last_catoni_mean[index]
 
-        if a > 0:
-            while a > 0:
-                guess0 += 1
-                a = self._sum_psi(index, guess0, delta, n)
-            ans = self._find_root(index, delta, n, guess0-1, guess0)
-        else:
-            while a < 0:
-                guess0 -= 1
-                a = self._sum_psi(index, guess0, delta, n)
-            ans = self._find_root(index, delta, n, guess0, guess0+1)
+        a = self._sum_psi(index, guess)
+        print("sum_psi:", a)
+        iter_count = 0
+        while np.abs(a) > self.tol and iter_count < 50:
+            guess = self.newton_iter(index, guess)
+            a = self._sum_psi(index, guess)
 
-        self._last_catoni_mean[index] = ans
-        return ans
+        if np.abs(a) > self.tol and self.logger:
+            self.logger.warning(
+                f"Catoni mean: Newton method did not converge after 50 iterations")
+        elif self.logger:
+            self.logger.info(
+                f"Catoni mean: Newton method exited after {iter_count} iterations")
+        self._last_catoni_mean[index] = guess
+        return guess
 
-    def _find_root(self, index: int, delta: float, n: int, a: float, b: float) -> float:
-        tol = self.tol
-        while b - a > tol:
-            guess = (b+a)/2
-            if self._sum_psi(index, guess, delta, n) > 0:
-                a = guess
-            else:
-                b = guess
-        return (a+b)/2
+    def _sum_psi(self, index: int, guess: float) -> float:
+        alpha_d = self.alpha(len(self.reward_history[index]))
 
-    def _sum_psi(self, index: int, guess: float, delta, n) -> float:
-        alpha_d = self.alpha(delta, n)
+        def dum(x):
+            print("psi:", x)
+            return x
+        print("alpha_d:", alpha_d)
+        print("guess:", guess)
         if self._psi:
-            return sum(self._psi(alpha_d*(x-guess)) for x in self.reward_history[index])
-        return sum(self.psi(alpha_d*(x-guess)) for x in self.reward_history[index])
+            return sum(self._psi(alpha_d*(x-guess)) for x in self.reward_history[index].run())
+        return sum(dum(self.psi(alpha_d*(x-guess))) for x in self.reward_history[index].run())
+
+    def _d_sum_psi(self, index: int, guess: float) -> float:
+        alpha_d = self.alpha(len(self.reward_history[index]))
+        if self._dpsi:
+            return -alpha_d*sum(self._dpsi(alpha_d*(x-guess)) for x in self.reward_history[index].run())
+        return -alpha_d*sum(self.dpsi(alpha_d*(x-guess)) for x in self.reward_history[index].run())
 
     @property
     def mean(self) -> List[float]:
+        lgt_4 = 4*np.log(self._t)
+        for i in range(len(self._arms)):
+            if len(self.reward_history[i]) < lgt_4:
+                ans = np.array(
+                    [x.avg()+np.sqrt(2*self.v*lgt_4/len(x))
+                     for x in self.reward_history]
+                )
+                return ans
+
         if self._t <= len(self._arms):
             ans = np.array(
-                [x[0] if x else np.NaN for x in self.reward_history]
+                [x.head.num if len(
+                    x) else np.Infinity for x in self.reward_history]
             )
             return ans
 
         ans = np.zeros(len(self._arms))
-        t = self._t
 
-        for i in range(len(self._arms)):
-            s = len(self.reward_history[i])
-            ans[i] = self.get_Catoni_mean(i)+2*np.sqrt(2*self.v*np.log(t)/s)
+        ans = np.array([
+            self.get_Catoni_mean(i)+np.sqrt(2*self.v *
+                                            lgt_4/len(self.reward_history[i]))
+            for i in range(len(self._arms))
+        ])
+
         return ans
 
     def select_arm(self, *args, **kwargs) -> int:
-        lgt_8 = 8*np.log(self._t)
+        if self._t <= len(self._arms):
+            return self._t-1
+
+        lgt_4 = 4*np.log(self._t)
         for i in range(len(self._arms)):
-            if len(self.reward_history[i]) < lgt_8:
+            if len(self.reward_history[i]) < lgt_4:
                 return i
 
-        return np.argmax(self.mean)
+        mean = self.mean
+        print(mean)
+        return np.argmax(mean)
 
     def _after_draw(self, iteration: int, chosen_arm_index: int, reward: float) -> None:
         self._t += 1
-        self.reward_history[chosen_arm_index].append(reward)
+        self.reward_history[chosen_arm_index].add(reward)
