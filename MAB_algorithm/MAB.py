@@ -409,14 +409,7 @@ class robustUCB(MABAlgorithm):
     def alpha(self, n: int):
         lg1divdm2 = 4*np.log(self._t)
         v = self.v
-        print("lg1divdm2:", lg1divdm2)
-        print("v:", self.v)
-        print("n:", n)
-        print("sq:", lg1divdm2/(n*()))
-        v+v*lg1divdm2/(n-lg1divdm2)
-        ans = np.sqrt(lg1divdm2/(n*(v+v*lg1divdm2/(n-lg1divdm2))))
-        print("alpha:", ans)
-        return ans
+        return np.sqrt(lg1divdm2/(n*(v+v*lg1divdm2/(n-lg1divdm2))))
 
     @staticmethod
     def psi(x: float) -> float:
@@ -444,7 +437,6 @@ class robustUCB(MABAlgorithm):
         guess = self._last_catoni_mean[index]
 
         a = self._sum_psi(index, guess)
-        print("sum_psi:", a)
         iter_count = 0
         while np.abs(a) > self.tol and iter_count < 50:
             guess = self.newton_iter(index, guess)
@@ -462,14 +454,9 @@ class robustUCB(MABAlgorithm):
     def _sum_psi(self, index: int, guess: float) -> float:
         alpha_d = self.alpha(len(self.reward_history[index]))
 
-        def dum(x):
-            print("psi:", x)
-            return x
-        print("alpha_d:", alpha_d)
-        print("guess:", guess)
         if self._psi:
             return sum(self._psi(alpha_d*(x-guess)) for x in self.reward_history[index].run())
-        return sum(dum(self.psi(alpha_d*(x-guess))) for x in self.reward_history[index].run())
+        return sum(self.psi(alpha_d*(x-guess)) for x in self.reward_history[index].run())
 
     def _d_sum_psi(self, index: int, guess: float) -> float:
         alpha_d = self.alpha(len(self.reward_history[index]))
@@ -515,7 +502,6 @@ class robustUCB(MABAlgorithm):
                 return i
 
         mean = self.mean
-        print(mean)
         return np.argmax(mean)
 
     def _after_draw(self, iteration: int, chosen_arm_index: int, reward: float) -> None:
