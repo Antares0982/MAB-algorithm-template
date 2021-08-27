@@ -11,7 +11,8 @@ if TYPE_CHECKING:
 __all__ = [
     "MABAlgorithm",
     "DSEE",
-    "robustUCB"
+    "robustUCB",
+    "UCB1_HT"
 ]
 
 
@@ -173,11 +174,11 @@ class MABAlgorithm(object):
 
     def _simulation_result_dict(self, iteration: int, chosen_arm_index: int) -> dict:
         """
-        `_simulation_result_dict` should at least returns these fields and values.
+        `_simulation_result_dict` should at least returns necessary info.
 
         Note:
-            * the keys should not starts with `avg`, since Monte Carlo experiments
-                use `"avg_"+key` as the 
+            * the keys should not starts with `"avg"`, since Monte Carlo experiments
+                use `"avg_"+key` as key.
         """
         return {
             "iteration": iteration,
@@ -234,6 +235,13 @@ class MABAlgorithm(object):
             yield self._simulation_result_dict(iteration, chosen_arm_index)
 
             self._after_draw(iteration, chosen_arm_index, reward)
+
+
+class SimpleMAB(MABAlgorithm):
+    def select_arm(self, count: int, *args, **kwargs) -> int:
+        if count < len(self._arms):
+            return count
+        return np.argmax(self.mean)
 
 
 class DSEE(MABAlgorithm):
@@ -345,7 +353,7 @@ class robustUCB(MABAlgorithm):
             self,
             arms: List['Arm'],
             v: float,
-            tol: float = 1e-2,
+            tol: float = 1e-5,
             psi: Optional[Callable[..., float]] = None,
             dpsi: Optional[Callable[..., float]] = None,
             loggerOn: bool = True
@@ -428,21 +436,22 @@ class robustUCB(MABAlgorithm):
         return -1/(4*x+2)
 
     def newton_iter(self, index: int, x: float) -> float:
-        n = len(self.reward_history[index])
         return x - self._sum_psi(index, x)/self._d_sum_psi(index, x)
 
     def get_Catoni_mean(self, index: int) -> float:
-        n = len(self.reward_history[index])
-
         guess = self._last_catoni_mean[index]
 
         a = self._sum_psi(index, guess)
         iter_count = 0
-        while np.abs(a) > self.tol and iter_count < 50:
+        alpha_d = self.alpha(len(self.reward_history[index]))
+        tol = self.tol*alpha_d*alpha_d
+
+        while np.abs(a) > tol and iter_count < 50:
             guess = self.newton_iter(index, guess)
             a = self._sum_psi(index, guess)
+            iter_count += 1
 
-        if np.abs(a) > self.tol and self.logger:
+        if np.abs(a) > tol and self.logger:
             self.logger.warning(
                 f"Catoni mean: Newton method did not converge after 50 iterations")
         elif self.logger:
@@ -507,3 +516,60 @@ class robustUCB(MABAlgorithm):
     def _after_draw(self, iteration: int, chosen_arm_index: int, reward: float) -> None:
         self._t += 1
         self.reward_history[chosen_arm_index].add(reward)
+
+
+class UCB1_HT(MABAlgorithm):
+    __slots__ = [
+        "__alpha",
+        "__beta"
+    ]
+
+    def __init__(
+        self,
+        arms: List['Arm'],
+        alpha: float,
+        beta: float,
+        loggerOn: bool = True,
+
+    ) -> None:
+        super().__init__(arms, loggerOn=loggerOn)
+        self._init(alpha, beta)
+
+    def _init(self, alpha: float, beta: float):
+        self.alpha = alpha
+        self.beta = beta
+
+    @property
+    def alpha(self) -> float:
+        return self.__alpha
+
+    @alpha.setter
+    def alpha(self, aa: float):
+        if aa <= 0:
+            raise ValueError("Alpha should be positive")
+        self.__alpha = aa
+
+    @property
+    def beta(self) -> float:
+        return self.__beta
+
+    @beta.setter
+    def beta(self, bb: float):
+        if bb <= 0:
+            raise ValueError("Beta should be positive")
+        self.__beta = bb
+
+    @property
+    def mean(self) -> List[float]:
+        mean = super().mean
+        total = sum(self._counts)
+        for i in range(len(self._arms)):
+            mean[i] += np.power(total, self.alpha) / \
+                np.power(self._counts[i], self.beta)
+        return mean
+
+    def select_arm(self, count: int, *args, **kwargs) -> int:
+        if count < len(self._arms):
+            return count
+
+        return np.argmax(self.mean)

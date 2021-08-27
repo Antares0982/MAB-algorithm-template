@@ -10,6 +10,7 @@ __all__ = [
     "Arm",
     "TruncNormArm",
     "BernoulliArm",
+    "heavyTailArm",
     "armList"
 ]
 
