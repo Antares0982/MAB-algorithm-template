@@ -1,4 +1,28 @@
 from typing import Optional
+import numpy as np
+import logging
+
+
+class NewtonIteration(object):
+    @staticmethod
+    def iter_once(f, df, x, *args, **kwargs):
+        return x-f(x, *args, **kwargs)/df(x, *args, **kwargs)
+
+    @staticmethod
+    def iter_full(f, df, x, tol, maxsteps, *args, **kwargs):
+        if tol <= 0:
+            raise ValueError("TOL should be positive")
+        a = f(x, *args, **kwargs)
+        i = 0
+        while np.abs(a) > tol and i < maxsteps:
+            d = df(x, *args, **kwargs)
+            x = x-a/d
+            a = f(x, *args, **kwargs)
+            i += 1
+        if i == maxsteps and np.abs(a) > tol:
+            logging.getLogger(__name__).warning(
+                f"Newton method: didn't converge after {maxsteps} iterations.")
+        return a
 
 
 class Node(object):

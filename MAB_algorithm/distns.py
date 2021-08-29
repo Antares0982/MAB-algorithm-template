@@ -2,7 +2,7 @@ import numpy as np
 from scipy import integrate
 from scipy.special import expi
 from scipy.stats import rv_continuous
-
+from .MAButils import NewtonIteration
 __all__ = [
     "heavy_tail"
 ]
@@ -25,9 +25,10 @@ class heavy_tail(rv_continuous):
             :method:`rvs` to get value.
     """
 
-    def __init__(self, maxMomentOrder, mean):
+    def __init__(self, maxMomentOrder, mean, b):
         self._maxMomentOrder = maxMomentOrder
         self._mean = mean
+        self._b = b
         self._gen_coef()
         super().__init__(a=2-self._bias, b=np.Infinity,
                          name=f"heavy_tail_{maxMomentOrder}_{mean}")
@@ -36,11 +37,28 @@ class heavy_tail(rv_continuous):
         def log_sq(x: float) -> float:
             a = np.log(x)
             return a*a
+
         self._coef = 1/integrate.quad(
             lambda x: 1/(np.power(x, self._maxMomentOrder+1)*log_sq(x)), 2, np.Infinity)[0]
+
         m = integrate.quad(
             lambda x: self._coef/(np.power(x, self._maxMomentOrder)*log_sq(x)), 2, np.Infinity)[0]
+
+        def _f(x: float) -> float:
+            lg2 = np.log(2)
+            m = self._maxMomentOrder
+            m22 = np.power(2, m)*lg2
+            return -0.03+m22*(m*expi(-m*np.log(x))+1/(np.power(x, m)*np.log(x)))/(1+m22*m*expi(-m*lg2))
+
+        def _df(x: float) -> float:
+            pass # TODO(Antares): use newton methods to find the root of _f
+
+        r = NewtonIteration.iter_full() # TODO(Antares): ...
         self._bias = m-self._mean
+        pass # TODO(Antares): ...
+
+    def _linear_tran(self, x: float) -> float:
+        return self._alpha*x+self._beta
 
     def _pdf(self, x, *args):
         if x < 2-self._bias:
