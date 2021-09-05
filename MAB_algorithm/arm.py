@@ -166,13 +166,15 @@ class heavyTailArm(Arm):
             `1/(x**(maxMomentOrder+1)*log(x)**2)` to make the mean of distribution equal `mean`.
     """
 
-    def __init__(self, name: Union[str, int], maxMomentOrder: float, mean: float) -> None:
+    def __init__(self, name: Union[str, int], maxMomentOrder: float, mean: float, mainbound: float) -> None:
         super().__init__(name)
         if maxMomentOrder < 1:
             raise ValueError("Mean of random variable must exist")
         self.__maxMomentOrder = maxMomentOrder
         self.__mean = mean
-        self._heavy_tail_random_var_gen = heavy_tail(maxMomentOrder, mean)
+        self.__mainbound = mainbound
+        self._heavy_tail_random_var_gen = heavy_tail(
+            maxMomentOrder, mean, mainbound)
 
     @property
     def maxMomentOrder(self) -> float:
@@ -181,6 +183,10 @@ class heavyTailArm(Arm):
     @property
     def mean(self) -> float:
         return self.__mean
+
+    @property
+    def mainbound(self) -> float:
+        return self.__mainbound
 
     def _get_rewards(self, size: int) -> np.ndarray:
         return self._heavy_tail_random_var_gen.rvs(size=size)
@@ -195,6 +201,11 @@ class heavyTailArm(Arm):
         if self.maxMomentOrder < 2:
             return np.Infinity
         return self._heavy_tail_random_var_gen._variance
+
+    def moment(self, m: float):
+        if m > self.maxMomentOrder:
+            return np.Infinity
+        return 1  # TODO(Antares): ...
 
 
 class armList(object):

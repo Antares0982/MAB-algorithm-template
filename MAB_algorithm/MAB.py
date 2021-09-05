@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING, Callable, List, Optional, overload
 
 import numpy as np
 
-from .MAButils import MAB_Nodes
+from .MAButils import *
 
 if TYPE_CHECKING:
     from .arm import Arm
@@ -414,7 +414,7 @@ class robustUCB(MABAlgorithm):
                 "The tolerance should neither be negative nor too big")
         self.__tol = tt
 
-    def alpha(self, n: int):
+    def alpha(self, n: int) -> float:
         lg1divdm2 = 4*np.log(self._t)
         v = self.v
         return np.sqrt(lg1divdm2/(n*(v+v*lg1divdm2/(n-lg1divdm2))))
@@ -436,7 +436,11 @@ class robustUCB(MABAlgorithm):
         return -1/(4*x+2)
 
     def newton_iter(self, index: int, x: float) -> float:
-        return x - self._sum_psi(index, x)/self._d_sum_psi(index, x)
+        return NewtonIteration.iter_once(
+            lambda dum: self._sum_psi(index, dum),
+            lambda dum: self._d_sum_psi(index, dum),
+            x
+        )
 
     def get_Catoni_mean(self, index: int) -> float:
         guess = self._last_catoni_mean[index]
@@ -462,16 +466,13 @@ class robustUCB(MABAlgorithm):
 
     def _sum_psi(self, index: int, guess: float) -> float:
         alpha_d = self.alpha(len(self.reward_history[index]))
-
-        if self._psi:
-            return sum(self._psi(alpha_d*(x-guess)) for x in self.reward_history[index].run())
-        return sum(self.psi(alpha_d*(x-guess)) for x in self.reward_history[index].run())
+        p = self._psi if self._psi else self.psi
+        return sum(p(alpha_d*(x-guess)) for x in self.reward_history[index])
 
     def _d_sum_psi(self, index: int, guess: float) -> float:
         alpha_d = self.alpha(len(self.reward_history[index]))
-        if self._dpsi:
-            return -alpha_d*sum(self._dpsi(alpha_d*(x-guess)) for x in self.reward_history[index].run())
-        return -alpha_d*sum(self.dpsi(alpha_d*(x-guess)) for x in self.reward_history[index].run())
+        p = self._dpsi if self._dpsi else self.dpsi
+        return -alpha_d*sum(p(alpha_d*(x-guess)) for x in self.reward_history[index])
 
     @property
     def mean(self) -> List[float]:
