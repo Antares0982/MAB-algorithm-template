@@ -1,9 +1,14 @@
 import logging
-from typing import TYPE_CHECKING, Callable, List, Optional, overload
+from typing import Callable, List, Optional, Union, overload
 
 import numpy as np
 
 from .MAButils import *
+
+try:
+    from typing import TYPE_CHECKING
+except ImportError:
+    TYPE_CHECKING = False
 
 if TYPE_CHECKING:
     from .arm import Arm
@@ -43,6 +48,7 @@ class MABAlgorithm(object):
         arms (:obj:`List[Arm]`): Bandit arms.
     """
     __slots__ = [
+        "__dict__",
         "_arms",
         "_reward_sum",
         "_counts",
@@ -50,10 +56,22 @@ class MABAlgorithm(object):
         "collected_rewards",
         "expected_rewards",
         "optimal_arm_rewards",
-        "logger"
+        "logger",
+        "columnNames"
     ]
 
-    def __init__(self, arms: List['Arm'], loggerOn: bool = True) -> None:
+    def __init__(
+        self,
+        arms: List['Arm'],
+        loggerOn: bool = True,
+        columnNames: List[str] = [
+            'iteration',
+            'chosen_arm',
+            'regret',
+            'collected_rewards',
+            'collected_rewards_per_step'
+        ]
+    ) -> None:
         """
         Default initialization method of an Multi-armed bandit algorithm.
         """
@@ -64,6 +82,9 @@ class MABAlgorithm(object):
             self.logger: Optional[logging.Logger] = logging.getLogger(__name__)
         else:
             self.logger = None
+
+        self.columnNames = columnNames
+
         self._reset_variables()
 
     def _init(self, *args, **kwargs):
@@ -172,7 +193,7 @@ class MABAlgorithm(object):
                 optimal_arm_rewards = arm.optimal_rewards()
         self.optimal_arm_rewards = float(optimal_arm_rewards)
 
-    def _simulation_result_dict(self, iteration: int, chosen_arm_index: int) -> dict:
+    def _simulation_result(self, iteration: int, chosen_arm_index: int) -> List[Union[float, int]]:
         """
         `_simulation_result_dict` should at least returns necessary info.
 
@@ -180,13 +201,13 @@ class MABAlgorithm(object):
             * the keys should not starts with `"avg"`, since Monte Carlo experiments
                 use `"avg_"+key` as key.
         """
-        return {
-            "iteration": iteration,
-            "chosen_arm": self._arms[chosen_arm_index].name,
-            "regret": self.regret,
-            "collected_rewards": self.collected_rewards,
-            "collected_rewards_per_step": self.collected_rewards / (iteration + 1)
-        }
+        return np.array([
+            iteration,
+            self._arms[chosen_arm_index].name,
+            self.regret,
+            self.collected_rewards,
+            self.collected_rewards/(iteration+1)
+        ])
 
     def run_simulation(self, number_of_iterations: int):
         """
@@ -232,9 +253,12 @@ class MABAlgorithm(object):
 
             self._update_rewards_info(chosen_arm_index, reward)
 
-            yield self._simulation_result_dict(iteration, chosen_arm_index)
+            yield self._simulation_result(iteration, chosen_arm_index)
 
             self._after_draw(iteration, chosen_arm_index, reward)
+
+    def run_to_list(self, number_of_iterations: int):
+        return list(self.run_simulation(number_of_iterations))
 
 
 class SimpleMAB(MABAlgorithm):
