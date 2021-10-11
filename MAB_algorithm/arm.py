@@ -207,6 +207,28 @@ class heavyTailArm(Arm):
             return np.Infinity
         return 1  # TODO(Antares): ...
 
+    @overload
+    def draw(self) -> float:
+        ...
+
+    @overload
+    def draw(self, size: int) -> np.ndarray:
+        ...
+
+    def draw(self, size=None):
+        if size is None:
+            while True:
+                try:
+                    ans = super().draw()
+                except Exception:
+                    continue
+                return ans
+        else:
+            ans = np.array([0.0 for i in range(size)])
+            for i in range(size):
+                ans[i] = self.draw()
+            return ans
+
 
 class armList(object):
     """

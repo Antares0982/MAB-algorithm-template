@@ -42,7 +42,7 @@ class heavy_tail(rv_continuous):
         self._mean = mean
         self._b = b
         self._gen_coef()
-        super().__init__(name=f"heavy_tail_{maxMomentOrder}_{mean}")
+        super().__init__(name=f"heavy_tail_{maxMomentOrder}_{mean}_{b}")
 
     def _gen_coef(self):
         def log_sq(x: float) -> float:

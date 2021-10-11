@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 
 __all__ = [
     "MABAlgorithm",
+    "SimpleMAB",
     "DSEE",
     "robustUCB",
     "UCB1_HT"
