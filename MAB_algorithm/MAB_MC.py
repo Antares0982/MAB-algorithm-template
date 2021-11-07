@@ -6,9 +6,7 @@ from typing import Any, Dict, List, Type, Union
 
 import numpy as np
 
-from .arm import *
-
-# from .MAButils import shared_object
+from MAB_algorithm.arm import *
 
 try:
     from typing import TYPE_CHECKING

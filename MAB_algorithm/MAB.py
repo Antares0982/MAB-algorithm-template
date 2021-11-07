@@ -1,9 +1,9 @@
 import logging
-from typing import Callable, List, Optional, Union, overload
+from typing import Callable, List, Optional, Union
 
 import numpy as np
 
-from .MAButils import *
+from MAB_algorithm.MAButils import *
 
 try:
     from typing import TYPE_CHECKING
@@ -11,13 +11,13 @@ except ImportError:
     TYPE_CHECKING = False
 
 if TYPE_CHECKING:
-    from .arm import Arm
+    from MAB_algorithm.arm import Arm
 
 __all__ = [
     "MABAlgorithm",
     "SimpleMAB",
     "DSEE",
-    "robustUCB",
+    "CatoniRobustUCB",
     "UCB1_HT"
 ]
 
@@ -58,7 +58,8 @@ class MABAlgorithm(object):
         "expected_rewards",
         "optimal_arm_rewards",
         "logger",
-        "columnNames"
+        "columnNames",
+        "iteration"
     ]
 
     def __init__(
@@ -113,6 +114,7 @@ class MABAlgorithm(object):
         Generally one should not override this method. To reset user defined
         variables, use :method:`restart()`
         """
+        self.iteration = 0
         self._reward_sum = np.zeros(len(self._arms))
         self._counts = np.zeros(len(self._arms))
         self.optimal_strategy_rewards = 0.0
@@ -135,15 +137,10 @@ class MABAlgorithm(object):
         """Represent regret of an algorithm."""
         return self.optimal_strategy_rewards - self.expected_rewards
 
-    @overload
     def select_arm(self,
-                   count: Optional[int],
                    mean_estimator: Optional[Callable[..., float]] = None,
                    *args, **kwargs
                    ) -> int:
-        ...
-
-    def select_arm(self, *args, **kwargs) -> int:
         """
         The method that returns the index of the Arm that the player selects
         on the current play. This method should be implemented in subclasses.
@@ -168,7 +165,7 @@ class MABAlgorithm(object):
     def _get_reward(self, index: int) -> float:
         return self._arms[index].draw()
 
-    def _after_draw(self, iteration: int, chosen_arm_index: int, reward: float) -> None:
+    def _after_draw(self, chosen_arm_index: int, reward: float) -> None:
         """
         After process method. Should be overriden if the algorithm needs.
 
@@ -194,7 +191,7 @@ class MABAlgorithm(object):
                 optimal_arm_rewards = arm.optimal_rewards()
         self.optimal_arm_rewards = float(optimal_arm_rewards)
 
-    def _simulation_result(self, iteration: int, chosen_arm_index: int) -> List[Union[float, int]]:
+    def _simulation_result(self, chosen_arm_index: int) -> List[Union[float, int]]:
         """
         `_simulation_result_dict` should at least returns necessary info.
 
@@ -203,11 +200,11 @@ class MABAlgorithm(object):
                 use `"avg_"+key` as key.
         """
         return np.array([
-            iteration,
+            self.iteration,
             self._arms[chosen_arm_index].name,
             self.regret,
             self.collected_rewards,
-            self.collected_rewards/(iteration+1)
+            self.collected_rewards/(self.iteration+1)
         ])
 
     def run_simulation(self, number_of_iterations: int):
@@ -242,11 +239,8 @@ class MABAlgorithm(object):
         if number_of_iterations < 1:
             raise ValueError("Number of iterations must be positive")
 
-        for iteration in range(number_of_iterations):
-            chosen_arm_index = self.select_arm(
-                count=iteration,
-                mean_estimator=None
-            )
+        for self.iteration in range(number_of_iterations):
+            chosen_arm_index = self.select_arm()
 
             reward = self._get_reward(chosen_arm_index)
 
@@ -254,18 +248,19 @@ class MABAlgorithm(object):
 
             self._update_rewards_info(chosen_arm_index, reward)
 
-            yield self._simulation_result(iteration, chosen_arm_index)
+            yield self._simulation_result(chosen_arm_index)
 
-            self._after_draw(iteration, chosen_arm_index, reward)
+            self._after_draw(chosen_arm_index, reward)
 
     def run_to_list(self, number_of_iterations: int):
         return list(self.run_simulation(number_of_iterations))
 
 
 class SimpleMAB(MABAlgorithm):
-    def select_arm(self, count: int, *args, **kwargs) -> int:
-        if count < len(self._arms):
-            return count
+    """The simplest algorithm, only chooses the arm with max average reward."""
+    def select_arm(self, *args, **kwargs) -> int:
+        if self.iteration < len(self._arms):
+            return self.iteration
         return np.argmax(self.mean)
 
 
@@ -363,12 +358,165 @@ class DSEE(MABAlgorithm):
         return int(np.argmax(mean))
 
 
-class robustUCB(MABAlgorithm):
+class truncatedRobustUCB(MABAlgorithm):
+    """TODO."""
+    __slots__ = [
+        "__ve",
+        "__u",
+        "reward_history"
+    ]
+
+    def __init__(self,
+                 arms: List['Arm'],
+                 ve: float,
+                 u: float,
+                 loggerOn: bool = True,
+                 ) -> None:
+        super().__init__(arms, loggerOn=loggerOn)
+        self._init(ve, u)
+
+    def _init(self, ve: float, u: float):
+        self.ve = ve
+        self.u = u
+        self.reward_history: List[MAB_Nodes] = [
+            MAB_Nodes() for _ in range(len(self._arms))
+        ]
+
+    def restart(self, ve: float, u: float) -> None:
+        super().restart()
+        self._init(ve, u)
+
+    @property
+    def u(self) -> float:
+        return self.__u
+
+    @u.setter
+    def u(self, uu: float):
+        if uu <= 0:
+            raise ValueError("Parameter u should be positive")
+        self.__u = uu
+
+    @property
+    def ve(self) -> float:
+        return self.__ve
+
+    @ve.setter
+    def ve(self, vv: float):
+        if vv <= 0 or vv > 1:
+            raise ValueError("Parameter epsilon should be in (0,1]")
+        self.__ve = vv
+
+    @property
+    def mean(self) -> List[float]:
+        ee = self.u/(2*np.log(self.iteration+1))
+
+        def bd(x: int) -> float:
+            return np.power(ee*x, 1/(1+self.ve))
+
+        ans = np.zeros(len(self._arms))
+
+        for i, nodes in enumerate(self.reward_history):
+            for j, xj in enumerate(nodes):
+                if np.abs(xj) < bd(j+1):
+                    ans[i] += xj
+            ans[i] /= len(nodes)
+        return ans
+
+    def select_arm(self, *args, **kwargs) -> int:
+        if self.iteration < len(self._arms):
+            return self.iteration
+        return np.argmax(self.mean)
+
+    def _after_draw(self, chosen_arm_index: int, reward: float) -> None:
+        self.reward_history[chosen_arm_index].add(reward)
+
+
+class medianRobustUCB(MABAlgorithm):
+    """TODO."""
+    __slots__ = [
+        "__ve",
+        "__v",
+        "reward_history"
+    ]
+
+    def __init__(self,
+                 arms: List['Arm'],
+                 ve: float,
+                 v: float,
+                 loggerOn: bool = True,
+                 ) -> None:
+        super().__init__(arms, loggerOn=loggerOn)
+        self._init(ve, v)
+
+    def _init(self, ve: float, v: float):
+        self.ve = ve
+        self.v = v
+        self.reward_history: List[MAB_Nodes] = [
+            MAB_Nodes() for _ in range(len(self._arms))
+        ]
+
+    def restart(self, ve: float, v: float) -> None:
+        super().restart()
+        self._init(ve, v)
+
+    @property
+    def v(self) -> float:
+        return self.__v
+
+    @v.setter
+    def v(self, vv: float):
+        if vv <= 0:
+            raise ValueError("Parameter u should be positive")
+        self.__v = vv
+
+    @property
+    def ve(self) -> float:
+        return self.__ve
+
+    @ve.setter
+    def ve(self, vv: float):
+        if vv <= 0 or vv > 1:
+            raise ValueError("Parameter epsilon should be in (0,1]")
+        self.__ve = vv
+
+    @property
+    def mean(self) -> List[float]:
+        ee = self.v/(2*np.log(self.iteration+1))
+
+        def bd(x: int) -> float:
+            return np.power(ee*x, 1/(1+self.ve))
+
+        ans = np.zeros(len(self._arms))
+
+        for i, nodes in enumerate(self.reward_history):
+            k = int(np.floor(min(1+16*np.log(self.iteration+1), len(nodes)/2)))
+            k = 1 if k < 1 else k
+            N = int(np.floor(len(nodes)/k))
+            tmp = np.zeros(k)
+            for j, v in enumerate(nodes):
+                b = j//N
+                if b == k:
+                    break
+                if np.abs(v) <= bd((j % N)+1):
+                    tmp[b] += v
+            ans[i] = np.median(tmp)/N
+        return ans
+
+    def select_arm(self, *args, **kwargs) -> int:
+        if self.iteration < 2*len(self._arms):
+            return self.iteration % len(self._arms)
+        return np.argmax(self.mean)
+
+    def _after_draw(self, chosen_arm_index: int, reward: float) -> None:
+        self.reward_history[chosen_arm_index].add(reward)
+
+
+class CatoniRobustUCB(MABAlgorithm):
+    """TODO."""
     __slots__ = [
         "__v",
         "__tol",
         "reward_history",
-        "_t",
         "_last_catoni_mean",
         "_psi",
         "_dpsi"
@@ -398,7 +546,6 @@ class robustUCB(MABAlgorithm):
         self.reward_history: List[MAB_Nodes] = [
             MAB_Nodes() for _ in range(len(self._arms))
         ]
-        self._t = 1
         self._last_catoni_mean = np.zeros(len(self._arms))
         self._psi = psi
         self._dpsi = None
@@ -440,7 +587,7 @@ class robustUCB(MABAlgorithm):
         self.__tol = tt
 
     def alpha(self, n: int) -> float:
-        lg1divdm2 = 4*np.log(self._t)
+        lg1divdm2 = 4*np.log(self.iteration+1)
         v = self.v
         return np.sqrt(lg1divdm2/(n*(v+v*lg1divdm2/(n-lg1divdm2))))
 
@@ -501,7 +648,7 @@ class robustUCB(MABAlgorithm):
 
     @property
     def mean(self) -> List[float]:
-        lgt_4 = 4*np.log(self._t)
+        lgt_4 = 4*np.log(self.iteration+1)
         for i in range(len(self._arms)):
             if len(self.reward_history[i]) < lgt_4:
                 ans = np.array(
@@ -510,7 +657,7 @@ class robustUCB(MABAlgorithm):
                 )
                 return ans
 
-        if self._t <= len(self._arms):
+        if self.iteration+1 <= len(self._arms):
             ans = np.array(
                 [x.head.num if len(
                     x) else np.Infinity for x in self.reward_history]
@@ -528,10 +675,10 @@ class robustUCB(MABAlgorithm):
         return ans
 
     def select_arm(self, *args, **kwargs) -> int:
-        if self._t <= len(self._arms):
-            return self._t-1
+        if self.iteration < len(self._arms):
+            return self.iteration
 
-        lgt_4 = 4*np.log(self._t)
+        lgt_4 = 4*np.log(self.iteration+1)
         for i in range(len(self._arms)):
             if len(self.reward_history[i]) < lgt_4:
                 return i
@@ -539,12 +686,12 @@ class robustUCB(MABAlgorithm):
         mean = self.mean
         return np.argmax(mean)
 
-    def _after_draw(self, iteration: int, chosen_arm_index: int, reward: float) -> None:
-        self._t += 1
+    def _after_draw(self, chosen_arm_index: int, reward: float) -> None:
         self.reward_history[chosen_arm_index].add(reward)
 
 
 class UCB1_HT(MABAlgorithm):
+    """An simple algorithm that not very effective."""
     __slots__ = [
         "__alpha",
         "__beta"
@@ -594,8 +741,7 @@ class UCB1_HT(MABAlgorithm):
                 np.power(self._counts[i], self.beta)
         return mean
 
-    def select_arm(self, count: int, *args, **kwargs) -> int:
-        if count < len(self._arms):
-            return count
-
+    def select_arm(self, *args, **kwargs) -> int:
+        if self.iteration < len(self._arms):
+            return self.iteration
         return np.argmax(self.mean)

@@ -5,7 +5,7 @@ from scipy import integrate
 from scipy.special import expi
 from scipy.stats import rv_continuous
 
-from .MAButils import *
+from MAB_algorithm.MAButils import *
 
 __all__ = [
     "heavy_tail"
@@ -106,7 +106,7 @@ class heavy_tail(rv_continuous):
 
     @property
     def _variance(self):
-        """Fast evaluation of this distribution"""
+        """Fast evaluation of the variance"""
         if hasattr(self, "__var"):
             return self.__var
         lg2 = np.log(2)

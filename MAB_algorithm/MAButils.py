@@ -97,3 +97,6 @@ class MAB_Nodes(object):
 
     def __len__(self):
         return self.__len
+
+    def __repr__(self) -> str:
+        return str([x for x in self])

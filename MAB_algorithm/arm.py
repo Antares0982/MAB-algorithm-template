@@ -4,7 +4,7 @@ import numpy as np
 from scipy.stats._continuous_distns import truncnorm
 from scipy.stats._discrete_distns import bernoulli
 
-from .distns import *
+from MAB_algorithm.distns import *
 
 __all__ = [
     "Arm",
@@ -201,11 +201,6 @@ class heavyTailArm(Arm):
         if self.maxMomentOrder < 2:
             return np.Infinity
         return self._heavy_tail_random_var_gen._variance
-
-    def moment(self, m: float):
-        if m > self.maxMomentOrder:
-            return np.Infinity
-        return 1  # TODO(Antares): ...
 
     @overload
     def draw(self) -> float:

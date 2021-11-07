@@ -1,6 +1,6 @@
 # MAB-algorithm
 
-![image](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)![image](https://img.shields.io/badge/SciPy-654FF0?style=for-the-badge&logo=SciPy&logoColor=white)![image](https://img.shields.io/badge/Numpy-777BB4?style=for-the-badge&logo=numpy&logoColor=white)
+![image](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)![image](https://img.shields.io/badge/SciPy-654FF0?style=for-the-badge&logo=SciPy&logoColor=white)![image](https://img.shields.io/badge/Numpy-777BB4?style=for-the-badge&logo=numpy&logoColor=white)![image](https://img.shields.io/github/license/Antares0982/MAB-algorithm-template)
 
 [Code template for Multi-Armed Bandit algorithms](https://github.com/Antares0982/MAB-algorithm-template)
 

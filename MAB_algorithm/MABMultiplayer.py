@@ -2,8 +2,8 @@ from typing import Callable, Dict, List, Optional, Set, overload
 
 import numpy as np
 
-from .arm import *
-from .MAB import *
+from MAB_algorithm.arm import *
+from MAB_algorithm.MAB import *
 
 # TODO(Antares): will finish this later
 
@@ -39,7 +39,6 @@ class MABMultiplayer(MABAlgorithm):
     @overload
     def select_arm(self,
                    player: int,
-                   count: int,
                    mean_estimator: Optional[Callable[..., int]] = None,
                    *args, **kwargs
                    ) -> int:
