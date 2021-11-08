@@ -12,16 +12,17 @@ __all__ = [
 
 
 class NewtonIteration(object):
-    """
-    This class only contains static functions for Newton Iteration.
-    """
+
+    """This class only contains static functions for Newton Iteration."""
+
     @staticmethod
     def iter_once(f, df, x, *args, **kwargs) -> float:
         return x-f(x, *args, **kwargs)/df(x, *args, **kwargs)
 
     @staticmethod
     def iter_full(f, df, x0, tol, maxsteps, *args, **kwargs) -> float:
-        """A simple newton iteration method.
+        """
+        A simple newton iteration method.
 
         Args:
             tol (:param:`Union[float, function]`): Accept float or function. For example,
@@ -64,12 +65,16 @@ class Node(object):
     ]
 
     def __init__(self, num: float) -> None:
+        """Store a num and the next node."""
         self.num = num
         self.next: Optional[Node] = None
 
 
 class MAB_Nodes(object):
+    """Represent a list of nodes."""
+
     def __init__(self) -> None:
+        """Store head and tail, and an int `__len` representing length."""
         self.head: Optional[Node] = None
         self.tail: Optional[Node] = None
         self.__len = 0
@@ -84,6 +89,7 @@ class MAB_Nodes(object):
         self.__len += 1
 
     def __iter__(self):
+        """The iterator yields all the floats stored in the list of nodes."""
         p = self.head
         while p is not None:
             yield p.num
@@ -96,7 +102,9 @@ class MAB_Nodes(object):
         return ss/self.__len
 
     def __len__(self):
+        """Return length of list."""
         return self.__len
 
     def __repr__(self) -> str:
+        """Represents like a list object. Calling `print(nodes)` is not suggested."""
         return str([x for x in self])

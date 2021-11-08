@@ -15,8 +15,6 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from threading import Lock
-
     from .MAB import *
 
 __all__ = [
@@ -25,6 +23,7 @@ __all__ = [
 
 
 class MAB_MonteCarlo(object):
+
     """
     The class for Monte Carlo experiment of MAB (multi-armed bandit) algorithm.
 
@@ -263,10 +262,9 @@ class MAB_MonteCarlo(object):
             iterations: int,
             dictdata: List[List[dict]],
             waitingjobcounts: List[int],
-            lock: 'Lock'
+            lock: threading.Lock
     ):
         """Static method to run a single process MAB monte carlo test."""
-
         gens = [algorithm(
             arms,
             loggerOn=False,

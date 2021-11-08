@@ -17,6 +17,8 @@ __all__ = [
     "MABAlgorithm",
     "SimpleMAB",
     "DSEE",
+    "truncatedRobustUCB",
+    "medianRobustUCB",
     "CatoniRobustUCB",
     "UCB1_HT"
 ]
@@ -258,6 +260,7 @@ class MABAlgorithm(object):
 
 class SimpleMAB(MABAlgorithm):
     """The simplest algorithm, only chooses the arm with max average reward."""
+
     def select_arm(self, *args, **kwargs) -> int:
         if self.iteration < len(self._arms):
             return self.iteration
@@ -512,7 +515,9 @@ class medianRobustUCB(MABAlgorithm):
 
 
 class CatoniRobustUCB(MABAlgorithm):
+
     """TODO."""
+
     __slots__ = [
         "__v",
         "__tol",

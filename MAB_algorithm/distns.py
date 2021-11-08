@@ -13,6 +13,7 @@ __all__ = [
 
 
 class heavy_tail(rv_continuous):
+
     """
     A heavy tail distribution with pdf that is dilated and translated from 
     `1/(x**(maxMomentOrder+1)*log(x)**2)`. Input mean value `mean` and 97 percent quantile `b` 
@@ -38,6 +39,7 @@ class heavy_tail(rv_continuous):
     """
 
     def __init__(self, maxMomentOrder, mean, b):
+        """Store parameters and generate coefficients."""
         self._maxMomentOrder = maxMomentOrder
         self._mean = mean
         self._b = b
@@ -106,7 +108,7 @@ class heavy_tail(rv_continuous):
 
     @property
     def _variance(self):
-        """Fast evaluation of the variance"""
+        """Fast evaluation of the variance."""
         if hasattr(self, "__var"):
             return self.__var
         lg2 = np.log(2)

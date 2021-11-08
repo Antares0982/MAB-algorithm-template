@@ -16,6 +16,18 @@ __all__ = [
 
 
 class Arm(object):
+
+    """
+    Base class of an arm of bandit for inheritance.
+
+    Note:
+        * methods `optimal_rewards`, `variance` and `_get_rewards` should be
+            defined by subclasses.
+
+    Args:
+        name (:obj:`Union[str, int]`): the name of arm.
+    """
+
     def __init__(self, name: Union[str, int]) -> None:
         """Base class of an arm of bandit for inheritance."""
         self.__name = name
@@ -29,7 +41,8 @@ class Arm(object):
         return self.__name
 
     def _get_rewards(self, size: int) -> np.ndarray:
-        """Get rewards according to a certain size.
+        """
+        Get rewards according to a certain size.
 
         Args:
             size (:obj:`int`): number of draws.
@@ -51,7 +64,8 @@ class Arm(object):
         ...
 
     def draw(self, size=None):
-        """Get rewards.
+        """
+        Get rewards. Overriding this method is not recommanded.
 
         Args:
             size (:obj:`int`, optional): Number of draws. If is `None`, then draw once
