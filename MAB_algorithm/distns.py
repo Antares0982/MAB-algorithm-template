@@ -5,7 +5,7 @@ from scipy import integrate
 from scipy.special import expi
 from scipy.stats import rv_continuous
 
-from MAB_algorithm.MAButils import *
+from MAB_algorithm.MAButils import NewtonIteration
 
 __all__ = [
     "heavy_tail"
@@ -86,9 +86,9 @@ class heavy_tail(rv_continuous):
             return 1e-15
 
         r = NewtonIteration.iter_full(_f, _df, x0, _tol, 50)
-
         if r < me:
             raise ValueError("maxMomentOrder is too large")
+
         self._alpha = (r-me)/(self._b-self._mean)
 
         self._beta = r-self._alpha*self._b

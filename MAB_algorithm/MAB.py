@@ -2,7 +2,9 @@ import logging
 from typing import Callable, List, Optional, Union
 
 import numpy as np
+import pandas as pd
 
+from MAB_algorithm.mabCutils import getCatoniMean, mabnodes
 from MAB_algorithm.MAButils import *
 
 try:
@@ -139,6 +141,16 @@ class MABAlgorithm(object):
         """Represent regret of an algorithm."""
         return self.optimal_strategy_rewards - self.expected_rewards
 
+    def regret_ub_curve(self, time: int, delta_i: List[float]) -> float:
+        """
+        The theoretical upper bound of regret curve. Will be used in simulation plot.
+        The graph of regret curve should not be higher than :method:`regret_ub_curve`.
+        If that happens for large time `t`, then you should check your implement or theory.
+
+        This method should be defined in subclasses.
+        """
+        ...
+
     def select_arm(self,
                    mean_estimator: Optional[Callable[..., float]] = None,
                    *args, **kwargs
@@ -209,6 +221,10 @@ class MABAlgorithm(object):
             self.collected_rewards/(self.iteration+1)
         ])
 
+    def atSimulationStart(self, number_of_iterations: int) -> None:
+        """Print info here."""
+        ...
+
     def run_simulation(self, number_of_iterations: int):
         """
         Run simulation and update the probabilities to pull for each arm.
@@ -241,6 +257,8 @@ class MABAlgorithm(object):
         if number_of_iterations < 1:
             raise ValueError("Number of iterations must be positive")
 
+        self.atSimulationStart(number_of_iterations)
+
         for self.iteration in range(number_of_iterations):
             chosen_arm_index = self.select_arm()
 
@@ -254,8 +272,17 @@ class MABAlgorithm(object):
 
             self._after_draw(chosen_arm_index, reward)
 
-    def run_to_list(self, number_of_iterations: int):
-        return list(self.run_simulation(number_of_iterations))
+    def run_simulation_tolist(self, number_of_iterations: int) -> List[List[Union[float, int]]]:
+        ans = np.zeros((number_of_iterations, len(self.columnNames)))
+        for i, v in enumerate(self.run_simulation(number_of_iterations)):
+            ans[i] = v
+        return ans
+
+    def run_to_pdframe(self, number_of_iterations: int):
+        return pd.DataFrame(self.run_simulation_tolist(number_of_iterations), columns=self.columnNames)
+
+    def to_pdframe(self, data: List[List[Union[float, int]]]):
+        return pd.DataFrame(data, columns=self.columnNames)
 
 
 class SimpleMAB(MABAlgorithm):
@@ -381,8 +408,8 @@ class truncatedRobustUCB(MABAlgorithm):
     def _init(self, ve: float, u: float):
         self.ve = ve
         self.u = u
-        self.reward_history: List[MAB_Nodes] = [
-            MAB_Nodes() for _ in range(len(self._arms))
+        self.reward_history: List[mabnodes] = [
+            mabnodes() for _ in range(len(self._arms))
         ]
 
     def restart(self, ve: float, u: float) -> None:
@@ -515,7 +542,6 @@ class medianRobustUCB(MABAlgorithm):
 
 
 class CatoniRobustUCB(MABAlgorithm):
-
     """TODO."""
 
     __slots__ = [
@@ -523,6 +549,7 @@ class CatoniRobustUCB(MABAlgorithm):
         "__tol",
         "reward_history",
         "_last_catoni_mean",
+        "total_sample_num",
         "_psi",
         "_dpsi"
     ]
@@ -532,43 +559,31 @@ class CatoniRobustUCB(MABAlgorithm):
             arms: List['Arm'],
             v: float,
             tol: float = 1e-5,
-            psi: Optional[Callable[..., float]] = None,
-            dpsi: Optional[Callable[..., float]] = None,
             loggerOn: bool = True
     ) -> None:
         super().__init__(arms, loggerOn=loggerOn)
-        self._init(v, tol, psi, dpsi)
+        self._init(v, tol)
 
     def _init(
         self,
         v: float,
-        tol: float = 1e-2,
-        psi: Optional[Callable[..., float]] = None,
-        dpsi: Optional[Callable[..., float]] = None
+        tol: float = 1e-5,
     ):
         self.v = v
         self.tol = tol
-        self.reward_history: List[MAB_Nodes] = [
-            MAB_Nodes() for _ in range(len(self._arms))
+        self.reward_history: List[mabnodes] = [
+            mabnodes() for _ in range(len(self._arms))
         ]
+        self.total_sample_num = 0
         self._last_catoni_mean = np.zeros(len(self._arms))
-        self._psi = psi
-        self._dpsi = None
-        if psi is not None:
-            if dpsi is None:
-                raise ValueError(
-                    "If psi is given, the derivative of psi should also be given.")
-            self._dpsi = dpsi
 
     def restart(
         self,
         v: float,
-        tol: float = 1e-2,
-        psi: Optional[Callable[..., float]] = None,
-        dpsi: Optional[Callable[..., float]] = None
+        tol: float = 1e-2
     ) -> None:
         super().restart()
-        self._init(v, tol, psi, dpsi)
+        self._init(v, tol)
 
     @property
     def v(self) -> float:
@@ -591,108 +606,51 @@ class CatoniRobustUCB(MABAlgorithm):
                 "The tolerance should neither be negative nor too big")
         self.__tol = tt
 
-    def alpha(self, n: int) -> float:
-        lg1divdm2 = 4*np.log(self.iteration+1)
-        v = self.v
-        return np.sqrt(lg1divdm2/(n*(v+v*lg1divdm2/(n-lg1divdm2))))
-
-    @staticmethod
-    def psi(x: float) -> float:
-        if x <= 1 and x >= -1:
-            return x-x*x*x/6
-        if x > 1:
-            return np.log(2*x-1)/4+5/6
-        return -np.log(-2*x-1)/4-5/6
-
-    @staticmethod
-    def dpsi(x: float) -> float:
-        if x <= 1 and x >= -1:
-            return 1-x*x/2
-        if x > 1:
-            return 1/(4*x-2)
-        return -1/(4*x+2)
-
-    def newton_iter(self, index: int, x: float) -> float:
-        return NewtonIteration.iter_once(
-            lambda dum: self._sum_psi(index, dum),
-            lambda dum: self._d_sum_psi(index, dum),
-            x
-        )
+    def regret_ub_curve(self, time: int, delta_i: List[float]) -> float:
+        lgt = np.log(time)
+        ans = sum(8*self.v*lgt/di+8*di*lgt+5*di if di > 0 else 0 for di in delta_i)
+        return ans
 
     def get_Catoni_mean(self, index: int) -> float:
-        guess = self._last_catoni_mean[index]
-
-        a = self._sum_psi(index, guess)
-        iter_count = 0
-        alpha_d = self.alpha(len(self.reward_history[index]))
-        tol = self.tol*alpha_d*alpha_d
-
-        while np.abs(a) > tol and iter_count < 50:
-            guess = self.newton_iter(index, guess)
-            a = self._sum_psi(index, guess)
-            iter_count += 1
-
-        if np.abs(a) > tol and self.logger:
-            self.logger.warning(
-                f"Catoni mean: Newton method did not converge after 50 iterations")
-        elif self.logger:
-            self.logger.info(
-                f"Catoni mean: Newton method exited after {iter_count} iterations")
-        self._last_catoni_mean[index] = guess
-        return guess
-
-    def _sum_psi(self, index: int, guess: float) -> float:
-        alpha_d = self.alpha(len(self.reward_history[index]))
-        p = self._psi if self._psi else self.psi
-        return sum(p(alpha_d*(x-guess)) for x in self.reward_history[index])
-
-    def _d_sum_psi(self, index: int, guess: float) -> float:
-        alpha_d = self.alpha(len(self.reward_history[index]))
-        p = self._dpsi if self._dpsi else self.dpsi
-        return -alpha_d*sum(p(alpha_d*(x-guess)) for x in self.reward_history[index])
+        a = getCatoniMean(
+            self.v,
+            self.iteration+1,
+            self._last_catoni_mean[index],
+            self.reward_history[index],
+            self.tol
+        )[0]
+        self._last_catoni_mean[index] = a
+        return a
 
     @property
     def mean(self) -> List[float]:
         lgt_4 = 4*np.log(self.iteration+1)
-        for i in range(len(self._arms)):
-            if len(self.reward_history[i]) < lgt_4:
-                ans = np.array(
-                    [x.avg()+np.sqrt(2*self.v*lgt_4/len(x))
-                     for x in self.reward_history]
-                )
-                return ans
-
-        if self.iteration+1 <= len(self._arms):
-            ans = np.array(
-                [x.head.num if len(
-                    x) else np.Infinity for x in self.reward_history]
-            )
-            return ans
-
-        ans = np.zeros(len(self._arms))
-
         ans = np.array([
             self.get_Catoni_mean(i)+np.sqrt(2*self.v *
                                             lgt_4/len(self.reward_history[i]))
-            for i in range(len(self._arms))
+            for i, _ in enumerate(self._arms)
         ])
 
         return ans
 
     def select_arm(self, *args, **kwargs) -> int:
-        if self.iteration < len(self._arms):
-            return self.iteration
-
-        lgt_4 = 4*np.log(self.iteration+1)
-        for i in range(len(self._arms)):
-            if len(self.reward_history[i]) < lgt_4:
-                return i
+        if self.iteration < self.total_sample_num:
+            return self.iteration % len(self._arms)
 
         mean = self.mean
         return np.argmax(mean)
 
     def _after_draw(self, chosen_arm_index: int, reward: float) -> None:
         self.reward_history[chosen_arm_index].add(reward)
+
+    def atSimulationStart(self, number_of_iterations: int):
+        one_sample_num = int(np.ceil(4*np.log(number_of_iterations)))
+        self.total_sample_num = len(self._arms)*one_sample_num
+        info = f"Warning: the iteration step length is {number_of_iterations}, \
+            the algorithm will sample for {self.total_sample_num} times, \
+            each arm will be sampled {one_sample_num} times."
+        info = ' '.join(info.split())
+        print(info)
 
 
 class UCB1_HT(MABAlgorithm):

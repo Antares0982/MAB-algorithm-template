@@ -1,8 +1,7 @@
 import logging
-import threading
 import time
-from multiprocessing import Manager, Pool
-from typing import Any, Dict, List, Type, Union
+from multiprocessing import Pool
+from typing import Any, Dict, List, Type, TypeVar, Union, overload
 
 import numpy as np
 
@@ -15,11 +14,13 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from .MAB import *
+    from MAB_algorithm.MAB import *
 
 __all__ = [
     "MAB_MonteCarlo"
 ]
+
+_T = TypeVar("_T")
 
 
 class MAB_MonteCarlo(object):
@@ -28,7 +29,7 @@ class MAB_MonteCarlo(object):
     The class for Monte Carlo experiment of MAB (multi-armed bandit) algorithm.
 
     Passing any MAB algorithm class name which inherited :class:`MABAlgorithm` to the constructor
-    will define a MAB Monte Carlo experiment. Then use :method:`run_monte_carlo` to start experiment.
+    will define a MAB Monte Carlo experiment. Then use :method:`run_monte_carlo_to_list` to start experiment.
 
     Args:
         algorithm (:type:`Type[MABAlgorithm]`): A class inherited `MABAlgorithm`.
@@ -146,11 +147,26 @@ class MAB_MonteCarlo(object):
             ans['details'] = row
         return ans
 
-    def run_monte_carlo(
+    def monte_carlo_gen(
         self,
         repeatTimes: int,
         iterations: int,
-        needDetails: bool = False,
+        needDetails: bool = False
+    ):
+        """
+        Run a Monte Carlo test. This method returns a generator.
+        For multi-processing, use :method:`run_monte_carlo_to_list`.
+        """
+        if repeatTimes < 1:
+            raise ValueError("Repeat times should be at least 1")
+        if iterations < 1:
+            raise ValueError("Number of iterations must be positive")
+        return self._run_single_process(repeatTimes, iterations, needDetails)
+
+    def run_monte_carlo_to_list(
+        self,
+        repeatTimes: int,
+        iterations: int,
         useCores: int = 1
     ):
         if repeatTimes < 1:
@@ -159,12 +175,13 @@ class MAB_MonteCarlo(object):
             raise ValueError("Number of iterations must be positive")
         if useCores < 1:
             raise ValueError("Number of cores to be used should be at least 1")
-        if useCores == 1:
-            return self._run_single_process(repeatTimes, iterations, needDetails)
-        else:
-            return self._run_multi_process(repeatTimes, iterations, needDetails, useCores)
+
+        return self._run_multi_process(repeatTimes, iterations, useCores)
 
     def _run_single_process(self, repeatTimes: int, iterations: int, needDetails: bool):
+        """
+        This method returns a generator yielding answer at each step.
+        """
         algs = [
             self.algorithm(
                 self.arms, loggerOn=False, **self.kwargs)
@@ -190,11 +207,17 @@ class MAB_MonteCarlo(object):
 
             yield ans
 
+    @staticmethod
+    def _list_flatten(lst: List[List[_T]]) -> List[_T]:
+        v = lst[0]
+        for vv in lst[1:]:
+            v += vv
+        return v
+
     def _run_multi_process(
             self,
             repeatTimes: int,
             iterations: int,
-            needDetails: bool,
             processes: int
     ):
         sample_per_process = repeatTimes // processes
@@ -202,80 +225,33 @@ class MAB_MonteCarlo(object):
         sample_numbers = [sample_per_process+1]*residue + \
             [sample_per_process]*(processes-residue)
 
-        slice_index = [0]*(processes+1)
-        for i in range(1, processes+1):
-            slice_index[i] = slice_index[i-1] + sample_numbers[i-1]
-
-        # process manager
-        manager = Manager()
-        waitingjobcounts = manager.list(
-            [processes for _ in range(iterations)]
-        )
-
-        lock = manager.Lock()
-
-        dictdata: List[List[dict]] = [
-            [manager.list([]) for _ in range(iterations)]
-            for _ in range(repeatTimes)
-        ]
-        colnames = self.algorithm(
-            self.arms,
-            loggerOn=False,
-            **self.kwargs
-        ).columnNames
-
         tuplelist = [(
             self.algorithm,
             self.arms,
             self.kwargs,
             iterations,
-            dictdata[slice_index[i]:slice_index[i+1]],
-            waitingjobcounts,
-            lock
+            sample_numbers[i]
         ) for i in range(processes)]
 
-        mp = Pool(processes=processes)
+        with Pool(processes=processes) as mp:
+            table = self._list_flatten(mp.starmap(
+                self._run_to_list_with_multi_process, tuplelist))
 
-        # main thread reads the output
-        th = threading.Thread(target=mp.starmap, args=(
-            self._run_to_list_with_multi_process, tuplelist))
-        th.start()
-
-        for iterindex in range(iterations):
-            while waitingjobcounts[iterindex] != 0:
-                time.sleep(1)
-
-            yield self.multi_process_monte_carlo_result(
-                colnames,
-                dictdata,
-                iterindex,
-                needDetails
-            )
-
-        mp.close()
+        return table
+        # every element in table is an array of algorithm result, need to
 
     @staticmethod
     def _run_to_list_with_multi_process(
-            algorithm: type['MABAlgorithm'],
+            algorithm: Type['MABAlgorithm'],
             arms: List[Arm],
             kwargs: Dict[str, Any],
             iterations: int,
-            dictdata: List[List[dict]],
-            waitingjobcounts: List[int],
-            lock: threading.Lock
+            size
     ):
         """Static method to run a single process MAB monte carlo test."""
-        gens = [algorithm(
+        return [algorithm(
             arms,
             loggerOn=False,
             **kwargs
-        ).run_simulation(iterations)
-            for _ in range(len(dictdata))]
-
-        for nowiterindex in range(iterations):
-            for i in range(len(gens)):
-                dictdata[i][nowiterindex] += gens[i].__next__()
-
-            lock.acquire()
-            waitingjobcounts[nowiterindex] -= 1
-            lock.release()
+        ).run_simulation_tolist(iterations)
+            for _ in range(size)]

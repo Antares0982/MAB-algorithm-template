@@ -8,6 +8,7 @@ from MAB_algorithm.distns import *
 
 __all__ = [
     "Arm",
+    "constArm",
     "TruncNormArm",
     "BernoulliArm",
     "heavyTailArm",
@@ -88,6 +89,32 @@ class Arm(object):
     def get_dict(self) -> dict:
         """Return the arm values as dictionary with name and probability."""
         return {"name": self.name}
+
+
+class constArm(Arm):
+    """
+    An arm that only gives a constant reward. May be used for algorithm testing.
+
+    Args:
+        val (:obj:`float`): the constant reward the arm gives.
+    """
+
+    def __init__(self, name: Union[str, int], val: float) -> None:
+        super().__init__(name)
+        self.__val = val
+
+    @property
+    def val(self):
+        return self.__val
+
+    def optimal_rewards(self) -> float:
+        return self.val
+
+    def variance(self) -> float:
+        return 0.0
+
+    def _get_rewards(self, size: int) -> np.ndarray:
+        return np.array([self.val]*size)
 
 
 class TruncNormArm(Arm):
@@ -249,10 +276,10 @@ class armList(object):
         if not arms:
             raise ValueError("There is no arm.")
 
-        return np.argmax(x.optimal_rewards() for x in arms)
+        return np.argmax([x.optimal_rewards() for x in arms])
 
     @staticmethod
-    def get_optimal_arm_rewards(arms: List[Arm]) -> int:
+    def get_optimal_arm_rewards(arms: List[Arm]) -> float:
         ind = armList.get_optimal_arm_index(arms)
         return arms[ind].optimal_rewards()
 

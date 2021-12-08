@@ -130,13 +130,13 @@ for ans in dseegenerator:
     i += 1
 ```
 
-Or, use `run_to_list` to get all information directly across the input time steps.
+Or, use `run_simulation_tolist` to get all information directly across the input time steps.
 
 ```python
 from MAB_algorithm import *
 armlist = [TruncNormArm(name=i, mu=i, sigma=1) for i in range(10)]
 dsee = DSEE(arms=armlist, w=10)
-allinfo = dsee.run_to_list(10000) # T=10000.
+allinfo = dsee.run_simulation_tolist(10000) # T=10000.
 # This step is time-consuming and may give no log during the whole time.
 # `allinfo` will be a list of 10000 dicts.
 ```
@@ -151,13 +151,13 @@ To run a monte-carlo experiment, first pass algorithm class and all data needed 
 from MAB_algorithm import *
 armlist = [heavyTailArm(name=i, maxMomentOrder=2, mean=i/10, mainbound=1.5) for i in range(10)]
 mctest = MAB_MonteCarlo(DSEE, arms=armlist, w=10) # `w` is the initial parameter needed by DSEE
-gen = mctest.run_monte_carlo(repeatTimes=1000, iterations=10000, useCores=8)
+gen = mctest.run_monte_carlo_to_list(repeatTimes=1000, iterations=10000, useCores=8)
 # Use 8 processes, for 1000 independent expeiment of time step 10000.
 i = 0
 for ans in gen:
     # `ans` is also a dict containing necessary info like average reward, regret,
     # while information of each experiment is dropped.
-    # If every detail is needed, pass `needDetails=True` to `run_monte_carlo`.
+    # If every detail is needed, pass `needDetails=True` to `run_monte_carlo_to_list`.
     print(ans)
     i += 1
 ```
