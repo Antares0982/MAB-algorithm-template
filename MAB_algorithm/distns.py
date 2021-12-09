@@ -5,6 +5,7 @@ from scipy import integrate
 from scipy.special import expi
 from scipy.stats import rv_continuous
 
+from MAB_algorithm.mabCutils import heavytail_dist_pdf
 from MAB_algorithm.MAButils import NewtonIteration
 
 __all__ = [
@@ -13,7 +14,6 @@ __all__ = [
 
 
 class heavy_tail(rv_continuous):
-
     """
     A heavy tail distribution with pdf that is dilated and translated from 
     `1/(x**(maxMomentOrder+1)*log(x)**2)`. Input mean value `mean` and 97 percent quantile `b` 
@@ -45,6 +45,8 @@ class heavy_tail(rv_continuous):
         self._b = b
         self._gen_coef()
         super().__init__(name=f"heavy_tail_{maxMomentOrder}_{mean}_{b}")
+        self._pdf = lambda x: heavytail_dist_pdf(
+            self._alpha, self._beta, self._coef, self._maxMomentOrder, x)
 
     def _gen_coef(self):
         def log_sq(x: float) -> float:
@@ -92,9 +94,6 @@ class heavy_tail(rv_continuous):
         self._alpha = (r-me)/(self._b-self._mean)
 
         self._beta = r-self._alpha*self._b
-
-    def _linear_tran(self, x: float) -> float:
-        return self._alpha*x+self._beta
 
     def _pdf(self, x, *args):
         x = self._linear_tran(x)

@@ -12,7 +12,6 @@ __all__ = [
 
 
 class NewtonIteration(object):
-
     """This class only contains static functions for Newton Iteration."""
 
     @staticmethod

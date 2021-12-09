@@ -1,23 +1,19 @@
 #!/usr/bin/python3 -O
-# from setuptools import Extension
-from setuptools import find_packages, setup
+from setuptools import setup
 from Cython.Build import cythonize
 import numpy as np
 from distutils.extension import Extension
 
+_PACK_NAME = "MAB_algorithm"
+
 
 def main():
-    # cwd = os.path.abspath(os.path.dirname(__file__))
-    # subprocess.check_call([sys.executable, "build_src/setup.py", "build_ext", "-b",
-    #                        "MAB_algorithm"], cwd=cwd)
-
     with open('README.md', 'r', encoding='utf-8') as f:
         long_description = f.read()
 
     setup(
-        name="MAB_algorithm",
+        name=_PACK_NAME,
         version="0.0.1",
-        packages=find_packages(),
         author="Antares",
         author_email="Antares0982@gmail.com",
         license="MIT",
@@ -26,15 +22,20 @@ def main():
         long_description=long_description,
         long_description_content_type='text/markdown',
         url="https://github.com/Antares0982/MAB-algorithm-template",
-        ext_modules=cythonize([Extension("mabCutils",["MAB_algorithm/mabCutils.pyx", "MAB_algorithm/src/cutils.cpp","MAB_algorithm/src/cutils.h"])]),
+        ext_modules=cythonize([Extension("mabCutils", [
+            f"{_PACK_NAME}/mabCutils.pyx",
+            f"{_PACK_NAME}/src/cutils.cpp"
+        ])]),
         include_dirs=np.get_include(),
+        options={'build_ext': {"build_lib": _PACK_NAME}},
         install_requires=[
             'numpy',
             'scipy',
             'pandas',
-            # 'PyObjC;platform_system=="Darwin"',
-            # 'PyGObject;platform_system=="Linux"'
-        ]
+            'matplotlib'
+        ],
+        package_data={_PACK_NAME: ["*.so", "*.pyi"]},
+        packages=[_PACK_NAME]
     )
 
 

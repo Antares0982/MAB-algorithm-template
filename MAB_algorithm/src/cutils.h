@@ -1,81 +1,49 @@
 #ifndef CUTILS_H
 #define CUTILS_H
 
+// #include <iostream>
+#include <stdexcept>
 #include <utility>
 
 namespace mabCutils {
-    class node {
-    public:
-        node *next;
-        double val;
-
-    public:
-        node() : next(nullptr), val(0){};
-        node(double _val) : next(nullptr), val(_val){};
-    };
-
-    class mabnodescpp {
+    class mabarraycpp {
     private:
-        int _size;
-        node *head;
-        node *tail;
+        int _cap;
+        int _len;
+        double *arr;
 
     public:
-        mabnodescpp() : _size(0), head(nullptr), tail(nullptr){};
+        mabarraycpp() : _cap(0), _len(0), arr(nullptr) {}
 
-        mabnodescpp(double _val) : _size(1) {
-            head = new node(_val);
-            tail = head;
+        void startup(const int &cap) {
+            delete[] arr;
+            _len = 0;
+            _cap = cap;
+            arr = new double[cap];
         }
 
-        mabnodescpp(node &_h) : _size(1) {
-            head = &_h;
-            tail = head;
+        double &operator[](const int &index) const {
+            if (index < _len) return arr[index];
+            throw std::out_of_range("invalid index, expected less than " + std::to_string(_len));
         }
 
-        mabnodescpp(node *_h) : _size(1) {
-            head = _h;
-            tail = head;
+        void append(double v) {
+            arr[_len] = v;
+            ++_len;
         }
 
-        mabnodescpp(const mabnodescpp &ns) : _size(ns._size) {
-            head = ns.head;
-            tail = ns.tail;
-        }
+        int size() const { return _len; }
 
-        node *gethead() { return head; }
+        int cap() const { return _cap; }
 
-        node *gettail() { return tail; }
-
-        int size() { return _size; }
-
-        void append(double _val) {
-            if (!tail) {
-                _size = 1;
-                head = new node(_val);
-                tail = head;
-                return;
-            }
-            tail->next = new node(_val);
-            tail = tail->next;
-            ++_size;
-        }
-
-        double avg() {
+        double avg() const {
             double ans = 0.0;
-            for (auto p = gethead(); p; p = p->next) ans += p->val;
-            return ans / size();
+            for (int i = 0; i < _len; ++i) ans += arr[i];
+            return ans / _len;
         }
 
-        ~mabnodescpp() {
-            if (!head) return;
-            auto p = head;
-            node *p1;
-            while (p) {
-                p1 = p->next;
-                delete p;
-                p = p1;
-            }
+        ~mabarraycpp() {
+            delete[] arr;
         }
     };
 
@@ -85,13 +53,16 @@ namespace mabCutils {
 
     double dpsi(const double &x);
 
-    double sumpsi(const double &v, const int &itercount, const double &guess, mabnodescpp &nodes);
+    double sumpsi(const double &v, const int &itercount, const double &guess, mabarraycpp &arr);
 
-    double dsumpsi(const double &v, const int &itercount, const double &guess, mabnodescpp &nodes);
+    double dsumpsi(const double &v, const int &itercount, const double &guess, mabarraycpp &arr);
 
-    double nt_iter(const double &v, const int &itercount, const double &guess, mabnodescpp &nodes, const double &fguess);
+    double nt_iter(const double &v, const int &itercount, const double &guess, mabarraycpp &arr, const double &fguess);
 
-    std::pair<double, int> getcatoni(const double &v, const int &itercount, double &guess, mabnodescpp &nodes, const double &tol);
+    std::pair<double, int> getcatoni(const double &v, const int &itercount, double &guess, mabarraycpp &arr, const double &tol);
+
+    // distns utils
+    double heavytail_pdf(const double &alpha, const double &beta, const double &coef, const double &maxMomentOrder, double x);
 } // namespace mabCutils
 
 #endif // CUTILS_H

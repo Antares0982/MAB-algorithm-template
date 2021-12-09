@@ -4,7 +4,7 @@ from typing import Callable, List, Optional, Union
 import numpy as np
 import pandas as pd
 
-from MAB_algorithm.mabCutils import getCatoniMean, mabnodes
+from MAB_algorithm.mabCutils import getCatoniMean, mabarray
 from MAB_algorithm.MAButils import *
 
 try:
@@ -408,8 +408,8 @@ class truncatedRobustUCB(MABAlgorithm):
     def _init(self, ve: float, u: float):
         self.ve = ve
         self.u = u
-        self.reward_history: List[mabnodes] = [
-            mabnodes() for _ in range(len(self._arms))
+        self.reward_history: List[mabarray] = [
+            None for _ in range(len(self._arms))
         ]
 
     def restart(self, ve: float, u: float) -> None:
@@ -459,6 +459,11 @@ class truncatedRobustUCB(MABAlgorithm):
 
     def _after_draw(self, chosen_arm_index: int, reward: float) -> None:
         self.reward_history[chosen_arm_index].add(reward)
+
+    def atSimulationStart(self, number_of_iterations: int) -> None:
+        self.reward_history: List[mabarray] = [
+            mabarray(number_of_iterations) for _ in range(len(self._arms))
+        ]
 
 
 class medianRobustUCB(MABAlgorithm):
@@ -571,8 +576,8 @@ class CatoniRobustUCB(MABAlgorithm):
     ):
         self.v = v
         self.tol = tol
-        self.reward_history: List[mabnodes] = [
-            mabnodes() for _ in range(len(self._arms))
+        self.reward_history: List[mabarray] = [
+            None for _ in range(len(self._arms))
         ]
         self.total_sample_num = 0
         self._last_catoni_mean = np.zeros(len(self._arms))
@@ -608,7 +613,8 @@ class CatoniRobustUCB(MABAlgorithm):
 
     def regret_ub_curve(self, time: int, delta_i: List[float]) -> float:
         lgt = np.log(time)
-        ans = sum(8*self.v*lgt/di+8*di*lgt+5*di if di > 0 else 0 for di in delta_i)
+        ans = sum(8*self.v*lgt/di+8*di*lgt+5 *
+                  di if di > 0 else 0 for di in delta_i)
         return ans
 
     def get_Catoni_mean(self, index: int) -> float:
@@ -651,6 +657,9 @@ class CatoniRobustUCB(MABAlgorithm):
             each arm will be sampled {one_sample_num} times."
         info = ' '.join(info.split())
         print(info)
+        self.reward_history: List[mabarray] = [
+            mabarray(number_of_iterations) for _ in range(len(self._arms))
+        ]
 
 
 class UCB1_HT(MABAlgorithm):

@@ -22,37 +22,44 @@ namespace mabCutils {
         return 1.0 - x * x / 2;
     }
 
-    double sumpsi(const double &v, const int &itercount, const double &guess, mabnodescpp &nodes) {
+    double sumpsi(const double &v, const int &itercount, const double &guess, mabarraycpp &arr) {
         double ans = 0.0;
-        auto a_d = catonialpha(v, itercount, nodes.size());
-        for (auto p = nodes.gethead(); p; p = p->next) {
-            ans += psi(a_d * (p->val - guess));
-        }
+        auto a_d = catonialpha(v, itercount, arr.size());
+        for (int i = 0; i < arr.size(); ++i) ans += psi(a_d * (arr[i] - guess));
         return ans;
     }
 
-    double dsumpsi(const double &v, const int &itercount, const double &guess, mabnodescpp &nodes) {
+    double dsumpsi(const double &v, const int &itercount, const double &guess, mabarraycpp &arr) {
         double ans = 0.0;
-        auto a_d = catonialpha(v, itercount, nodes.size());
-        for (auto p = nodes.gethead(); p; p = p->next) ans += dpsi(a_d * (p->val - guess));
+        auto a_d = catonialpha(v, itercount, arr.size());
+        for (int i = 0; i < arr.size(); ++i) ans += dpsi(a_d * (arr[i] - guess));
         return -a_d * ans;
     }
 
-    double nt_iter(const double &v, const int &itercount, const double &guess, mabnodescpp &nodes, const double &fguess) {
-        return guess - fguess / dsumpsi(v, itercount, guess, nodes);
+    double nt_iter(const double &v, const int &itercount, const double &guess, mabarraycpp &arr, const double &fguess) {
+        return guess - fguess / dsumpsi(v, itercount, guess, arr);
     }
 
-    std::pair<double, int> getcatoni(const double &v, const int &itercount, double &guess, mabnodescpp &nodes, const double &tol) {
-        auto a = sumpsi(v, itercount, guess, nodes);
+    std::pair<double, int> getcatoni(const double &v, const int &itercount, double &guess, mabarraycpp &arr, const double &tol) {
+        auto a = sumpsi(v, itercount, guess, arr);
         int nt_itercount = 0;
-        auto a_d = catonialpha(v, itercount, nodes.size());
+        auto a_d = catonialpha(v, itercount, arr.size());
         auto realtol = tol * a_d * a_d;
         while ((a > realtol || a < -realtol) && nt_itercount < 50) {
-            guess = nt_iter(v, itercount, guess, nodes, a);
-            a = sumpsi(v, itercount, guess, nodes);
+            guess = nt_iter(v, itercount, guess, arr, a);
+            a = sumpsi(v, itercount, guess, arr);
             ++nt_itercount;
         }
         return {guess, nt_itercount};
+    }
+
+    // distns
+    double heavytail_pdf(const double &alpha, const double &beta, const double &coef, const double &maxMomentOrder, double x) {
+        x = alpha * x + beta;
+        if (x < 2) return 0.0;
+        double log_sq = std::log(x);
+        log_sq *= log_sq;
+        return alpha * coef / (std::pow(x, maxMomentOrder + 1) * log_sq);
     }
 } // namespace mabCutils
 

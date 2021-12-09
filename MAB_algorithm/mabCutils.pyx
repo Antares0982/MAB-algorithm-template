@@ -1,49 +1,45 @@
 # distutils: language = c++
-import numpy
-cimport numpy
 from libcpp.pair cimport pair
 
-cdef extern from "src/cutils.h" namespace "mabCutils":
-    cdef cppclass node:
-        node() except +
-        node(double) except +
-        node* next
-        double val
 
-    cdef cppclass mabnodescpp:
-        mabnodescpp() except +
-        mabnodescpp(double) except +
-        mabnodescpp(node*) except +
-        mabnodescpp(node) except +
-        mabnodescpp(mabnodescpp) except +
-        int size
-        node* next
-        node* tail
-        node* gethead()
-        node* gettail()
+cdef extern from "src/cutils.h" namespace "mabCutils":
+    cdef cppclass mabarraycpp:
+        mabarraycpp() except +
+        void startup(const int&)
         int size()
         void append(double)
         double avg()
+        double& operator[](const int&)
 
-    pair[double, int] getcatoni(double, int, double, mabnodescpp, double)
+    pair[double, int] getcatoni(double, int, double, mabarraycpp, double)
 
-# def _sumup(numpy.ndarray[numpy.float64_t, ndim=1] arr):
-#     for i,v in enumerate(arr):
-#         arr[i] = f(v)
-cdef class mabnodes:
-    cdef mabnodescpp wrappednode
+    double heavytail_pdf(double, double, double, double, double)
 
-    def __cinit__(self):
-        self.wrappednode = mabnodescpp()
 
-    def add(self, v):
-        self.wrappednode.append(v)
+cdef class mabarray:
+    cdef mabarraycpp wrapped
+
+    def __cinit__(self, int maxsize):
+        self.wrapped.startup(maxsize)
+
+    def add(self, double v):
+        self.wrapped.append(v)
 
     def avg(self):
-        return self.wrappednode.avg()
+        return self.wrapped.avg()
 
     def __len__(self):
-        return self.wrappednode.size()
+        return self.wrapped.size()
 
-def getCatoniMean(double v, int a, double z, mabnodes mm, double tt):
-    return getcatoni(v, a, z, mm.wrappednode, tt)
+    def __getitem__(self, int index):
+        return self.wrapped[index]
+
+    def __setitem__(self, int key, double val):
+        self.wrapped[key] = val
+
+
+def getCatoniMean(double v, int a, double z, mabarray mm, double tt):
+    return getcatoni(v, a, z, mm.wrapped, tt)
+
+def heavytail_dist_pdf(double alpha, double beta, double coef, double maxmomentorder, double x):
+    return heavytail_pdf(alpha, beta, coef, maxmomentorder, x)

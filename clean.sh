@@ -5,7 +5,7 @@
 
 cdnm="$(basename `readlink -f .`)"
 
-if [ $cdnm != "MAB_algorithm_template" ];then
+if [ $cdnm != "MAB_algorithm_template" ]; then
     echo "wrong directory"
     exit
 fi
@@ -13,5 +13,5 @@ fi
 rm -rf dist
 rm -rf build
 rm -rf MAB_algorithm.egg-info
-rm MAB_algorithm/mabCutils.cpp
+rm -r MAB_algorithm/mabCutils.cpp
 # rm MAB_algorithm/*.so
