@@ -45,8 +45,6 @@ class heavy_tail(rv_continuous):
         self._b = b
         self._gen_coef()
         super().__init__(name=f"heavy_tail_{maxMomentOrder}_{mean}_{b}")
-        self._pdf = lambda x: heavytail_dist_pdf(
-            self._alpha, self._beta, self._coef, self._maxMomentOrder, x)
 
     def _gen_coef(self):
         def log_sq(x: float) -> float:
@@ -96,14 +94,7 @@ class heavy_tail(rv_continuous):
         self._beta = r-self._alpha*self._b
 
     def _pdf(self, x, *args):
-        x = self._linear_tran(x)
-        if x < 2:
-            return 0
-
-        def log_sq(x: float) -> float:
-            a = np.log(x)
-            return a*a
-        return self._alpha*self._coef/(np.power(x, self._maxMomentOrder+1)*log_sq(x))
+        return heavytail_dist_pdf(self._alpha, self._beta, self._coef, self._maxMomentOrder, x)
 
     @property
     def _variance(self):

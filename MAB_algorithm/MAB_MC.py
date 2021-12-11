@@ -4,6 +4,7 @@ from multiprocessing import Pool
 from typing import Any, Dict, List, Type, TypeVar, Union
 
 import numpy as np
+import pandas as pd
 
 from MAB_algorithm.arm import *
 
@@ -51,15 +52,15 @@ class MAB_MonteCarlo(object):
         return armList.get_optimal_arm_index(self.arms)
 
     @staticmethod
-    def getcolnames(colnames):
+    def getcolnames(colnames) -> List[str]:
         ans = []
-        for i in range(len(colnames)):
-            if colnames[i] == 'iteration':
+        for i, coln in enumerate(colnames):
+            if coln == 'iteration':
                 ans.append(colnames[i])
-            elif colnames[i] == 'chosen_arm':
+            elif coln == 'chosen_arm':
                 ans.append('optimal_arm_chosen_possibility')
             else:
-                ans += ['avg_'+colnames[i], 'var_'+colnames[i]]
+                ans += ['avg_'+coln, 'var_'+coln]
         return ans
 
     def monte_carlo_avg_result(self, colnames: List[str], data: List[List[Union[float, int]]]) -> dict:
@@ -101,8 +102,6 @@ class MAB_MonteCarlo(object):
             iteration: int,
             needDetails: bool
     ) -> dict:
-        if not hasattr(self, 'columnNames'):
-            self.columnNames = self.getcolnames(colnames)
 
         ans = []
 
@@ -168,7 +167,7 @@ class MAB_MonteCarlo(object):
         repeatTimes: int,
         iterations: int,
         useCores: int = 1
-    ):
+    ) -> List[List[List[Union[float, int]]]]:
         if repeatTimes < 1:
             raise ValueError("Repeat times should be at least 1")
         if iterations < 1:
@@ -187,6 +186,10 @@ class MAB_MonteCarlo(object):
                 self.arms, loggerOn=False, **self.kwargs)
             for _ in range(repeatTimes)
         ]
+
+        if not hasattr(self, 'columnNames'):
+            self.columnNames = self.getcolnames(algs[0].columnNames)
+
         self.monte_carlo_iters = [
             alg.run_simulation(iterations)
             for alg in algs
@@ -211,7 +214,7 @@ class MAB_MonteCarlo(object):
     def _list_flatten(lst: List[List[_T]]) -> List[_T]:
         v = lst[0]
         for vv in lst[1:]:
-            v += vv
+            v = np.append(v, vv, axis=0)
         return v
 
     def _run_multi_process(
@@ -219,11 +222,14 @@ class MAB_MonteCarlo(object):
             repeatTimes: int,
             iterations: int,
             processes: int
-    ):
+    ) -> List[List[List[Union[float, int]]]]:
         sample_per_process = repeatTimes // processes
         residue = repeatTimes - sample_per_process*processes
         sample_numbers = [sample_per_process+1]*residue + \
             [sample_per_process]*(processes-residue)
+        if not hasattr(self, 'columnNames'):
+            self.columnNames = self.getcolnames(self.algorithm(
+                self.arms, loggerOn=False, **self.kwargs).columnNames)
 
         tuplelist = [(
             self.algorithm,
@@ -234,8 +240,11 @@ class MAB_MonteCarlo(object):
         ) for i in range(processes)]
 
         with Pool(processes=processes) as mp:
-            table = self._list_flatten(mp.starmap(
+            dum = np.array(mp.starmap(
                 self._run_to_list_with_multi_process, tuplelist))
+            # print(dum)
+        table: List[List[List[Union[float, int]]]] = self._list_flatten(dum)
+        # print(table)
 
         return table
         # every element in table is an array of algorithm result, need to
@@ -247,11 +256,40 @@ class MAB_MonteCarlo(object):
             kwargs: Dict[str, Any],
             iterations: int,
             size
-    ):
+    ) -> List[List[List[Union[float, int]]]]:
         """Static method to run a single process MAB monte carlo test."""
-        return [algorithm(
+        return np.array([algorithm(
             arms,
             loggerOn=False,
             **kwargs
         ).run_simulation_tolist(iterations)
-            for _ in range(size)]
+            for _ in range(size)])
+
+    def to_average(self, result: List[List[List[Union[float, int]]]]) -> List[List[Union[float, int]]]:
+        m = len(result[0])
+        n = len(self.columnNames)
+        ans = np.zeros((m, n))
+        i = 0
+        j = 0
+        for colname in self.columnNames:
+            if colname == "iteration":
+                ans[:, i] = np.array(range(m))+1
+                i += 1
+                j += 1
+            elif colname == "optimal_arm_chosen_possibility":
+                index = armList.get_optimal_arm_index(self.arms)
+                ans[:, i] = 1 - \
+                    np.count_nonzero(result[:, :, j]-index, axis=0)/len(result)
+                i += 1
+                j += 1
+            else:
+                if colname.startswith("avg"):
+                    ans[:, i] = np.mean(result[:, :, j], axis=0)
+                else:
+                    ans[:, i] = np.var(result[:, :, j], axis=0)
+                    j += 1
+                i += 1
+        return ans
+
+    def to_average_dataframe(self, result: List[List[List[Union[float, int]]]]) -> pd.DataFrame:
+        return pd.DataFrame(self.to_average(result), columns=self.columnNames)

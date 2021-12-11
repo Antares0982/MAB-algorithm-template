@@ -3,7 +3,7 @@ import sys
 import unittest
 
 
-class heavytail_test(unittest.TestCase):
+class robustUCB_test(unittest.TestCase):
     def test_draw(self):
         import time
         from typing import List, Type
