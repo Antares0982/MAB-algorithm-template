@@ -1,7 +1,7 @@
 import logging
 import time
 from multiprocessing import Pool
-from typing import Any, Dict, List, Type, TypeVar, Union, overload
+from typing import Any, Dict, List, Type, TypeVar, Union
 
 import numpy as np
 
@@ -14,7 +14,7 @@ except ImportError:
 
 
 if TYPE_CHECKING:
-    from MAB_algorithm.MAB import *
+    from MAB_algorithm.MAB import MABAlgorithm
 
 __all__ = [
     "MAB_MonteCarlo"

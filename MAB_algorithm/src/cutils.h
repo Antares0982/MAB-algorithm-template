@@ -1,7 +1,6 @@
 #ifndef CUTILS_H
 #define CUTILS_H
 
-// #include <iostream>
 #include <stdexcept>
 #include <utility>
 
@@ -36,6 +35,10 @@ namespace mabCutils {
 
         int cap() const { return _cap; }
 
+        double *begin() { return arr; }
+
+        double *end() { return &arr[_len]; }
+
         double avg() const {
             double ans = 0.0;
             for (int i = 0; i < _len; ++i) ans += arr[i];
@@ -47,22 +50,17 @@ namespace mabCutils {
         }
     };
 
-    double catonialpha(const double &v, const int &itercount, const int &_size);
+    // mean estimator
 
-    double psi(const double &x);
+    // Returns: catoni mean, number of times iterated
+    std::pair<double, int> getcatoni(const double &, const int &, double &, mabarraycpp &, const double &);
 
-    double dpsi(const double &x);
+    double truncatedMean(const double &, const double &, const int &, mabarraycpp &);
 
-    double sumpsi(const double &v, const int &itercount, const double &guess, mabarraycpp &arr);
-
-    double dsumpsi(const double &v, const int &itercount, const double &guess, mabarraycpp &arr);
-
-    double nt_iter(const double &v, const int &itercount, const double &guess, mabarraycpp &arr, const double &fguess);
-
-    std::pair<double, int> getcatoni(const double &v, const int &itercount, double &guess, mabarraycpp &arr, const double &tol);
+    double meadianMean(const double &, const double &, const int &, mabarraycpp &);
 
     // distns utils
-    double heavytail_pdf(const double &alpha, const double &beta, const double &coef, const double &maxMomentOrder, double x);
+    double heavytail_pdf(const double &, const double &, const double &, const double &, double);
 } // namespace mabCutils
 
 #endif // CUTILS_H

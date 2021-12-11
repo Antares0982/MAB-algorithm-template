@@ -4,16 +4,10 @@ from typing import Callable, List, Optional, Union
 import numpy as np
 import pandas as pd
 
-from MAB_algorithm.mabCutils import getCatoniMean, mabarray
-from MAB_algorithm.MAButils import *
+from MAB_algorithm.arm import armList, Arm
+from MAB_algorithm.mabCutils import (getCatoniMean, getMedianMean,
+                                     getTruncatedMean, mabarray)
 
-try:
-    from typing import TYPE_CHECKING
-except ImportError:
-    TYPE_CHECKING = False
-
-if TYPE_CHECKING:
-    from MAB_algorithm.arm import Arm
 
 __all__ = [
     "MABAlgorithm",
@@ -147,9 +141,24 @@ class MABAlgorithm(object):
         The graph of regret curve should not be higher than :method:`regret_ub_curve`.
         If that happens for large time `t`, then you should check your implement or theory.
 
-        This method should be defined in subclasses.
+        This method should be defined in subclasses. It is not necessary to implement it, if
+        you don't need to plot the regret upper bound curve.
+
+        Args:
+            time (:obj:`int`): The time step.
+            delta_i (:obj:`List`): The (non-negative) difference between this arm and the optimal arm.
+                This means that there is at least a zero element in `delta_i`, and all other elements
+                are non-negative.
         """
         ...
+
+    def gen_regret_ub_curve(self, number_of_iterations: int) -> List[float]:
+        """
+        Generate the regret upper bound curve data from `regret_ub_curve` for plotting.
+        """
+        best_reward = armList.get_optimal_arm_rewards(self._arms)
+        l = list(map(lambda x: best_reward-x.optimal_rewards(), self._arms))
+        return list(map(lambda x: self.regret_ub_curve(x+1, l), range(number_of_iterations)))
 
     def select_arm(self,
                    mean_estimator: Optional[Callable[..., float]] = None,
@@ -436,21 +445,20 @@ class truncatedRobustUCB(MABAlgorithm):
             raise ValueError("Parameter epsilon should be in (0,1]")
         self.__ve = vv
 
+    def regret_ub_curve(self, time: int, delta_i: List[float]) -> float:
+        ans = sum(8*np.power(4*self.u/di, 1/self.ve)*np.log(time)+(5 * di)
+                  if di > 0 else 0 for di in delta_i)
+        return ans
+
     @property
     def mean(self) -> List[float]:
-        ee = self.u/(2*np.log(self.iteration+1))
-
-        def bd(x: int) -> float:
-            return np.power(ee*x, 1/(1+self.ve))
-
-        ans = np.zeros(len(self._arms))
-
-        for i, nodes in enumerate(self.reward_history):
-            for j, xj in enumerate(nodes):
-                if np.abs(xj) < bd(j+1):
-                    ans[i] += xj
-            ans[i] /= len(nodes)
-        return ans
+        lgtsq = np.log(self.iteration+1)*2
+        up4 = 4*np.power(self.u, 1/(self.ve+1))
+        return np.array([
+            getTruncatedMean(self.u, self.ve, self.iteration+1, arr) +
+            up4*np.power(lgtsq/len(arr), self.ve/(self.ve+1))
+            for arr in self.reward_history
+        ])
 
     def select_arm(self, *args, **kwargs) -> int:
         if self.iteration < len(self._arms):
@@ -486,8 +494,8 @@ class medianRobustUCB(MABAlgorithm):
     def _init(self, ve: float, v: float):
         self.ve = ve
         self.v = v
-        self.reward_history: List[MAB_Nodes] = [
-            MAB_Nodes() for _ in range(len(self._arms))
+        self.reward_history: List[mabarray] = [
+            None for _ in range(len(self._arms))
         ]
 
     def restart(self, ve: float, v: float) -> None:
@@ -514,28 +522,19 @@ class medianRobustUCB(MABAlgorithm):
             raise ValueError("Parameter epsilon should be in (0,1]")
         self.__ve = vv
 
+    def regret_ub_curve(self, time: int, delta_i: List[float]) -> float:
+        return sum(32*np.power(12*self.v/di, 1/self.ve)*np.log(time)+(5 * di)
+                   if di > 0 else 0 for di in delta_i)
+
     @property
     def mean(self) -> List[float]:
-        ee = self.v/(2*np.log(self.iteration+1))
-
-        def bd(x: int) -> float:
-            return np.power(ee*x, 1/(1+self.ve))
-
-        ans = np.zeros(len(self._arms))
-
-        for i, nodes in enumerate(self.reward_history):
-            k = int(np.floor(min(1+16*np.log(self.iteration+1), len(nodes)/2)))
-            k = 1 if k < 1 else k
-            N = int(np.floor(len(nodes)/k))
-            tmp = np.zeros(k)
-            for j, v in enumerate(nodes):
-                b = j//N
-                if b == k:
-                    break
-                if np.abs(v) <= bd((j % N)+1):
-                    tmp[b] += v
-            ans[i] = np.median(tmp)/N
-        return ans
+        vp12 = np.power(12*self.v, 1/(self.ve+1))
+        lgtsqp2 = 32*np.log(self.iteration+1)+2
+        return np.array([
+            getMedianMean(self.v, self.ve, self.iteration+1, arr) +
+            vp12*np.power(lgtsqp2/len(arr), self.ve/(self.ve+1))
+            for arr in self.reward_history
+        ])
 
     def select_arm(self, *args, **kwargs) -> int:
         if self.iteration < 2*len(self._arms):
@@ -544,6 +543,11 @@ class medianRobustUCB(MABAlgorithm):
 
     def _after_draw(self, chosen_arm_index: int, reward: float) -> None:
         self.reward_history[chosen_arm_index].add(reward)
+
+    def atSimulationStart(self, number_of_iterations: int) -> None:
+        self.reward_history: List[mabarray] = [
+            mabarray(number_of_iterations) for _ in range(len(self._arms))
+        ]
 
 
 class CatoniRobustUCB(MABAlgorithm):
@@ -613,8 +617,8 @@ class CatoniRobustUCB(MABAlgorithm):
 
     def regret_ub_curve(self, time: int, delta_i: List[float]) -> float:
         lgt = np.log(time)
-        ans = sum(8*self.v*lgt/di+8*di*lgt+5 *
-                  di if di > 0 else 0 for di in delta_i)
+        ans = sum(8*self.v*lgt/di+8*di*lgt+5 * di
+                  if di > 0 else 0 for di in delta_i)
         return ans
 
     def get_Catoni_mean(self, index: int) -> float:
@@ -652,14 +656,17 @@ class CatoniRobustUCB(MABAlgorithm):
     def atSimulationStart(self, number_of_iterations: int):
         one_sample_num = int(np.ceil(4*np.log(number_of_iterations)))
         self.total_sample_num = len(self._arms)*one_sample_num
-        info = f"Warning: the iteration step length is {number_of_iterations}, \
-            the algorithm will sample for {self.total_sample_num} times, \
-            each arm will be sampled {one_sample_num} times."
-        info = ' '.join(info.split())
-        print(info)
-        self.reward_history: List[mabarray] = [
+
+        self.reward_history = [
             mabarray(number_of_iterations) for _ in range(len(self._arms))
         ]
+
+        if self.logger:
+            info = f"The iteration step length is {number_of_iterations}, \
+                the algorithm will sample for {self.total_sample_num} times, \
+                each arm will be sampled {one_sample_num} times."
+            info = ' '.join(info.split())
+            self.logger.warning(info)
 
 
 class UCB1_HT(MABAlgorithm):

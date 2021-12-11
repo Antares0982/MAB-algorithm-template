@@ -1,5 +1,7 @@
 # self defined
 *test.py
+!test/
+!test/*
 *.log
 *log.json
 .vscode/

@@ -1,13 +1,10 @@
 import logging
 from inspect import isfunction
-from typing import Optional
 
 import numpy as np
 
 __all__ = [
-    "NewtonIteration",
-    "Node",
-    "MAB_Nodes"
+    "NewtonIteration"
 ]
 
 
@@ -55,55 +52,3 @@ class NewtonIteration(object):
             logging.getLogger(__name__).warning(
                 f"Newton method: didn't converge after {maxsteps} iterations.")
         return x
-
-
-class Node(object):
-    __slots__ = [
-        "num",
-        "next"
-    ]
-
-    def __init__(self, num: float) -> None:
-        """Store a num and the next node."""
-        self.num = num
-        self.next: Optional[Node] = None
-
-
-class MAB_Nodes(object):
-    """Represent a list of nodes."""
-
-    def __init__(self) -> None:
-        """Store head and tail, and an int `__len` representing length."""
-        self.head: Optional[Node] = None
-        self.tail: Optional[Node] = None
-        self.__len = 0
-
-    def add(self, num: float):
-        if self.head is None:
-            self.head = Node(num)
-            self.tail = self.head
-        else:
-            self.tail.next = Node(num)
-            self.tail = self.tail.next
-        self.__len += 1
-
-    def __iter__(self):
-        """The iterator yields all the floats stored in the list of nodes."""
-        p = self.head
-        while p is not None:
-            yield p.num
-            p = p.next
-
-    def avg(self) -> float:
-        ss = 0
-        for n in self:
-            ss += n
-        return ss/self.__len
-
-    def __len__(self):
-        """Return length of list."""
-        return self.__len
-
-    def __repr__(self) -> str:
-        """Represents like a list object. Calling `print(nodes)` is not suggested."""
-        return str([x for x in self])

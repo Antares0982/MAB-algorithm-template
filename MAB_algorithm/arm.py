@@ -4,7 +4,7 @@ import numpy as np
 from scipy.stats._continuous_distns import truncnorm
 from scipy.stats._discrete_distns import bernoulli
 
-from MAB_algorithm.distns import *
+from MAB_algorithm.distns import heavy_tail
 
 __all__ = [
     "Arm",
@@ -86,6 +86,12 @@ class Arm(object):
     def variance(self) -> float:
         raise NotImplementedError
 
+    def centralMoment(self, atorder: float) -> float:
+        raise NotImplementedError
+
+    def originMoment(self, atorder: float) -> float:
+        raise NotImplementedError
+
     def get_dict(self) -> dict:
         """Return the arm values as dictionary with name and probability."""
         return {"name": self.name}
@@ -112,6 +118,12 @@ class constArm(Arm):
 
     def variance(self) -> float:
         return 0.0
+
+    def centralMoment(self, atorder: float) -> float:
+        return 0.0
+
+    def originMoment(self, atorder: float) -> float:
+        return np.power(np.abs(self.val), atorder)
 
     def _get_rewards(self, size: int) -> np.ndarray:
         return np.array([self.val]*size)
@@ -243,6 +255,9 @@ class heavyTailArm(Arm):
             return np.Infinity
         return self._heavy_tail_random_var_gen._variance
 
+    def originMoment(self, atorder: float) -> float:
+        return self._heavy_tail_random_var_gen.moment()
+
     @overload
     def draw(self) -> float:
         ...
@@ -343,4 +358,24 @@ class armList(object):
 
     @staticmethod
     def getmaxVariance(arms: List[Arm]) -> float:
-        return np.max([x.variance() for x in arms])
+        try:
+            return np.max([x.variance() for x in arms])
+        except NotImplementedError:
+            raise NotImplementedError(
+                "Didn't define variance for some arm")
+
+    @staticmethod
+    def getmaxCentralMomentAtOrder(arms: List[Arm], order: float) -> float:
+        try:
+            return np.max([x.centralMoment(order) for x in arms])
+        except NotImplementedError:
+            raise NotImplementedError(
+                "Didn't define central moment for some arm")
+
+    @staticmethod
+    def getmaxOriginMomentAtOrder(arms: List[Arm], order: float) -> float:
+        try:
+            return np.max([x.originMoment(order) for x in arms])
+        except NotImplementedError:
+            raise NotImplementedError(
+                "Didn't define origin moment for some arm")

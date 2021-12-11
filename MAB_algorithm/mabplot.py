@@ -3,15 +3,13 @@ from typing import List, Optional, Union, overload
 import matplotlib.pyplot as plt
 import pandas as pd
 
-from MAB_algorithm.arm import armList
-
 try:
     from typing import TYPE_CHECKING
 except ImportError:
     TYPE_CHECKING = False
 
 if TYPE_CHECKING:
-    from MAB_algorithm.MAB import *
+    from MAB_algorithm.MAB import MABAlgorithm
 
 __all__ = [
     "plotResult", "singlePlot"
@@ -156,12 +154,7 @@ def _plot_single_algorithm(
     if algorithm_name is None:
         algorithm_name = algorithm.__class__.__name__
     if use_regret_ub_curve:
-        best_reward = armList.get_optimal_arm_rewards(algorithm._arms)
-        l = list(map(lambda x: best_reward-x.optimal_rewards(), algorithm._arms))
-        curve = list(
-            map(lambda x: algorithm.regret_ub_curve(x+1, l), range(number_of_iterations)))
-        # curve = pd.DataFrame(list(
-        #     map(lambda x: algorithm.regret_ub_curve(x+1, l), range(number_of_iterations))), columns=["upper bound"]).get("upper bound")
+        curve = algorithm.gen_regret_ub_curve(number_of_iterations)
     _plot_single_dataframe(pdfr, algorithm_name, curve, ignore_columns)
 
 
