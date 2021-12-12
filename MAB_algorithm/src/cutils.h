@@ -3,6 +3,7 @@
 
 #include <stdexcept>
 #include <utility>
+#include <string>
 
 namespace mabCutils {
     class mabarraycpp {
