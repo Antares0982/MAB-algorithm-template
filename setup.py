@@ -34,7 +34,7 @@ def main():
             'pandas',
             'matplotlib'
         ],
-        package_data={_PACK_NAME: ["*.so", "*.pyi"]},
+        package_data={_PACK_NAME: ["*.pyi"]},
         packages=[_PACK_NAME]
     )
 
