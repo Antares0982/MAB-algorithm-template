@@ -4,7 +4,7 @@ import numpy as np
 from scipy.stats._continuous_distns import truncnorm
 from scipy.stats._discrete_distns import bernoulli
 
-from MAB_algorithm.distns import heavy_tail
+from MAB_algorithm.distns import heavy_tail, paretoTypeIIDist
 
 __all__ = [
     "Arm",
@@ -12,6 +12,7 @@ __all__ = [
     "TruncNormArm",
     "BernoulliArm",
     "heavyTailArm",
+    "ParetoArm",
     "armList"
 ]
 
@@ -256,7 +257,7 @@ class heavyTailArm(Arm):
         return self._heavy_tail_random_var_gen._variance
 
     def originMoment(self, atorder: float) -> float:
-        return self._heavy_tail_random_var_gen.moment()
+        return self._heavy_tail_random_var_gen.moment(atorder)
 
     @overload
     def draw(self) -> float:
@@ -275,9 +276,83 @@ class heavyTailArm(Arm):
                     continue
                 return ans
         else:
-            ans = np.array([0.0 for i in range(size)])
+            ans = np.array([0.0 for _ in range(size)])
             for i in range(size):
-                ans[i] = self.draw()
+                ans[i] = super().draw()
+            return ans
+
+
+class ParetoArm(Arm):
+    """
+    An arm with Pareto distribution, using
+    `maxMomentOrder/(sigma*(1+(x-mean)/sigma)**(maxMomentOrder+1))` as pdf.
+
+    Note:
+        * sigma is not variance, and mu is not mean.
+        * For the case `maxMomentOrder <= 2`, the distribution does not have finite variance.
+
+    Args:
+        maxMomentOrder (:ob:`float`): `maxMomentOrder` is the superior order of finite moments. If
+            s>=maxMomentOrder, the s-order moment is infinity.
+        mu (:obj:`float`): The left boundary of support.
+        sigma (:obj:`float`): Shape parameter. The moment is large if sigma is large.
+    """
+
+    def __init__(self, name: Union[str, int], maxMomentOrder: float, mu: float, sigma: float) -> None:
+        super().__init__(name)
+        if maxMomentOrder < 1:
+            raise ValueError("Mean of random variable must exist")
+        self.__maxMomentOrder = maxMomentOrder
+        self.__mu = mu
+        self.__sigma = sigma
+        self._pareto_dist_gen = paretoTypeIIDist(maxMomentOrder, mu, sigma)
+
+    @property
+    def maxMomentOrder(self) -> float:
+        return self.__maxMomentOrder
+
+    @property
+    def mu(self) -> float:
+        return self.__mu
+
+    @property
+    def sigma(self) -> float:
+        return self.__sigma
+
+    def _get_rewards(self, size: int) -> np.ndarray:
+        return self._pareto_dist_gen.rvs(size=size)
+
+    def optimal_rewards(self) -> float:
+        return self._pareto_dist_gen._mean
+
+    def variance(self) -> float:
+        """
+        The variance can be evaluated directly and accurately.
+        """
+        if self.maxMomentOrder <= 2:
+            return np.Infinity
+        return self._pareto_dist_gen._variance
+
+    @overload
+    def draw(self) -> float:
+        ...
+
+    @overload
+    def draw(self, size: int) -> np.ndarray:
+        ...
+
+    def draw(self, size=None):
+        if size is None:
+            while True:
+                try:
+                    ans = super().draw()
+                except Exception:
+                    continue
+                return ans
+        else:
+            ans = np.array([0.0 for _ in range(size)])
+            for i in range(size):
+                ans[i] = super().draw()
             return ans
 
 

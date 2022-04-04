@@ -9,7 +9,8 @@ from MAB_algorithm.mabCutils import heavytail_dist_pdf
 from MAB_algorithm.MAButils import NewtonIteration
 
 __all__ = [
-    "heavy_tail"
+    "heavy_tail",
+    "paretoTypeIIDist"
 ]
 
 
@@ -116,3 +117,52 @@ class heavy_tail(rv_continuous):
         a /= self._alpha*self._alpha
         self.__var: float = a
         return a
+
+
+class paretoTypeIIDist(rv_continuous):
+    """
+    A Pareto distribution (type II from wikipedia) with pdf 
+    `alpha/sigma * (1+(x-mu)/sigma)**(-1-alpha)`.
+
+    Note:
+        * Pareto distribution type II (hereinafter referred to as Pareto distribution) is 
+            heavy-tailed but easy to compute.
+        * Pareto distribution doesn't have finite alpha-order moment. However, for any 
+            `p<alpha`, p-th order moment exists.
+        * `mu < sigma` should hold.
+        * The mean of Pareto distribution is not parameter `mu`. Mean is `mu+sigma/(alpha-1)`.
+        * Pareto distribtion has support `x>mu`.
+        * :class:`paretoTypeIIDist` is a subclass of :class:`scipy.stats.rv_continuous`, 
+            so use :method:`rvs` to get value.
+        * For Pareto distribution, the q-th central moment `vq` and p-th central moment 
+            `vp` s.t. `vp = C * vq**(p/q)`, where `C = C(p, q, alpha)` is not related to 
+            `mu` and `sigma`.
+
+    Args:
+        maxMomentOrder (:obj:`float`): The superior of finite moment order.
+        mu (:obj:`float`): Left bound of the support.
+        sigma (:obj:`float`): A parameter related to moment.
+    """
+
+    def __init__(self, alpha: float, mu: float, sigma: float):
+        """Store parameters and generate coefficients."""
+        if mu >= sigma:
+            raise ValueError(
+                "Invalid parameters for Pareto distribution (type II)")
+        self._alpha = alpha
+        self._mu = mu
+        self._sigma = sigma
+
+        super().__init__(name=f"pareto_typeII_{alpha}_{mu}_{sigma}")
+
+    def _pdf(self, x, *args):
+        return self._alpha/self._sigma * np.power(1+(x-self._mu)/self._sigma, -1-self._alpha) if x > self._mu else 0
+
+    @property
+    def _mean(self):
+        return self._mu + self._sigma/(self._alpha-1)
+
+    @property
+    def _variance(self):
+        """Fast evaluation of the variance."""
+        return self._alpha*self._sigma*self._sigma / ((self._alpha-1)*(self._alpha-1)*(self._alpha-2))
