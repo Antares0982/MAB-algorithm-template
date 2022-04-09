@@ -17,7 +17,7 @@ cdef extern from "src/cutils.h" namespace "mabCutils":
 
     double truncatedMean(const double &, const double &, const int &, mabarraycpp &)
 
-    double meadianMean(const double &, const double &, const int &, mabarraycpp &)
+    double medianMean(const double &, const double &, const int &, mabarraycpp &)
 
     double heavytail_pdf(const double &, const double &, const double &, const double &, double)
 
@@ -53,7 +53,7 @@ def getTruncatedMean(const double &u, const double &ve, const int &itercount, ma
     return truncatedMean(u, ve, itercount, arr.wrapped)
 
 def getMedianMean(const double &v, const double &ve, const int &itercount, mabarray arr):
-    return meadianMean(v, ve, itercount, arr.wrapped)
+    return medianMean(v, ve, itercount, arr.wrapped)
 
 def heavytail_dist_pdf(const double &alpha, const double &beta, const double &coef, const double &maxmomentorder, double x):
     return heavytail_pdf(alpha, beta, coef, maxmomentorder, x)

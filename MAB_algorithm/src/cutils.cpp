@@ -7,38 +7,38 @@
 #include <vector>
 
 namespace mabCutils {
-    double catonialpha(const double &v, const int &itercount, const int &_size) {
+    double catonialpha(const double v, const int itercount, const int _size) {
         double lg4t = 4.0 * std::log(double(itercount));
         return std::sqrt(lg4t / (double(_size) * (v + v * lg4t / (double(_size) - lg4t))));
     }
 
-    double psi(const double &x) {
+    double psi(const double x) {
         if (x < 0) return -psi(-x);
         if (x > 1) return std::log(2 * x - 1) / 4 + 5.0 / 6;
         return x - x * x * x / 6;
     }
 
-    double dpsi(const double &x) {
+    double dpsi(const double x) {
         if (x < 0) return dpsi(-x);
         if (x > 1) return 1.0 / (4 * x - 2);
         return 1.0 - x * x / 2;
     }
 
-    double sumpsi(const double &v, const int &itercount, const double &guess, mabarraycpp &arr) {
+    double sumpsi(const double v, const int itercount, const double guess, mabarraycpp &arr) {
         double ans = 0.0;
         auto a_d = catonialpha(v, itercount, arr.size());
         for (int i = 0; i < arr.size(); ++i) ans += psi(a_d * (arr[i] - guess));
         return ans;
     }
 
-    double dsumpsi(const double &v, const int &itercount, const double &guess, mabarraycpp &arr) {
+    double dsumpsi(const double v, const int itercount, const double guess, mabarraycpp &arr) {
         double ans = 0.0;
         auto a_d = catonialpha(v, itercount, arr.size());
         for (int i = 0; i < arr.size(); ++i) ans += dpsi(a_d * (arr[i] - guess));
         return -a_d * ans;
     }
 
-    double nt_iter(const double &v, const int &itercount, const double &guess, mabarraycpp &arr, const double &fguess) {
+    double nt_iter(const double v, const int itercount, const double guess, mabarraycpp &arr, const double fguess) {
         return guess - fguess / dsumpsi(v, itercount, guess, arr);
     }
 
@@ -51,7 +51,7 @@ namespace mabCutils {
     }
 
     // mean sestimator
-    std::pair<double, int> getcatoni(const double &v, const int &itercount, double &guess, mabarraycpp &arr, const double &tol) {
+    std::pair<double, int> getcatoni(const double v, const int itercount, double &guess, mabarraycpp &arr, const double tol) {
         auto a = sumpsi(v, itercount, guess, arr);
         int nt_itercount = 0;
         auto a_d = catonialpha(v, itercount, arr.size());
@@ -64,7 +64,7 @@ namespace mabCutils {
         return {guess, nt_itercount};
     }
 
-    double truncatedMean(const double &u, const double &ve, const int &itercount, mabarraycpp &arr) {
+    double truncatedMean(const double u, const double ve, const int itercount, mabarraycpp &arr) {
         double ee = u / (2 * std::log(itercount));
         double vinv = 1 / (ve + 1);
         auto bd = [&](const double &x) {
@@ -78,7 +78,7 @@ namespace mabCutils {
         return ans / arr.size();
     }
 
-    double meadianMean(const double &v, const double &ve, const int &itercount, mabarraycpp &arr) {
+    double medianMean(const double v, const double ve, const int itercount, mabarraycpp &arr) {
         double ee = v / (2 * std::log(itercount));
         double vinv = 1 / (ve + 1);
         auto bd = [&](const int &x) {
@@ -98,12 +98,21 @@ namespace mabCutils {
     }
 
     // distns utils
-    double heavytail_pdf(const double &alpha, const double &beta, const double &coef, const double &maxMomentOrder, double x) {
+    double heavytail_pdf(const double alpha, const double beta, const double coef, const double maxMomentOrder, double x) {
         x = alpha * x + beta;
         if (x < 2) return 0.0;
         double log_sq = std::log(x);
         log_sq *= log_sq;
         return alpha * coef / (std::pow(x, maxMomentOrder + 1) * log_sq);
+    }
+
+    void medianOfMeanArrayCpp::updateAvgArray() {
+        // TODO
+    }
+
+    void medianOfMeanArrayCpp::updateMedianMeanArray(int binsizeN) {
+        
+        // TODO
     }
 } // namespace mabCutils
 
