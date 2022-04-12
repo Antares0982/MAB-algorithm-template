@@ -51,7 +51,7 @@ namespace mabCutils {
     }
 
     // mean sestimator
-    std::pair<double, int> getcatoni(const double v, const int itercount, double &guess, mabarraycpp &arr, const double tol) {
+    std::pair<double, int> getcatoni(const double v, const int itercount, double guess, mabarraycpp &arr, const double tol) {
         auto a = sumpsi(v, itercount, guess, arr);
         int nt_itercount = 0;
         auto a_d = catonialpha(v, itercount, arr.size());
@@ -72,7 +72,7 @@ namespace mabCutils {
         };
         double ans = 0.0;
         for (int i = 0; i < arr.size();) {
-            const double &v = arr[i];
+            double v = arr[i];
             if (std::abs(v) <= bd(++i)) ans += v;
         }
         return ans / arr.size();
@@ -89,18 +89,15 @@ namespace mabCutils {
         int N = int(std::floor(double(arr.size()) / k));
         std::vector<double> tmp(k, 0.0);
 
-        std::cout << itercount << std::endl;
-
         for (int i = 0; i < arr.size(); ++i) {
             int b = i / N;
             if (b == k) break;
-            double &v = arr[i];
+            double v = arr[i];
             if (std::abs(v) <= bd((i % N) + 1)) {
                 if (b >= k) throw std::out_of_range("Out of range");
                 tmp[b] += v;
             }
         }
-        std::cout << "add finish, finding median" << std::endl;
         return findmedian(tmp) / N;
     }
 

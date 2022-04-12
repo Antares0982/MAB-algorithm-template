@@ -16,25 +16,18 @@ namespace mabCutils {
     protected:
         int _cap;
         int _len;
-        // std::unique_ptr<double[]> arr_unique_ptr;
-        double *arr_unique_ptr = nullptr;
+        std::unique_ptr<double[]> arr_unique_ptr;
 
     public:
         mabarraycpp() : _cap(0), _len(0) {}
 
         void operator=(mabarraycpp &) = delete;
 
-        virtual ~mabarraycpp() {
-            delete[] arr_unique_ptr;
-            arr_unique_ptr = nullptr;
-            std::cout << "destrcuting" << std::endl;
-        }
+        virtual ~mabarraycpp() = default;
 
     public:
         virtual void startup(int cap) {
-            std::cout << "Initializing" << std::endl;
-            // arr_unique_ptr.reset(new double[_cap]);
-            arr_unique_ptr = new double[_cap];
+            arr_unique_ptr.reset(new double[cap]);
             _len = 0;
             _cap = cap;
         }
@@ -110,7 +103,7 @@ namespace mabCutils {
     // mean estimator
 
     // Returns: catoni mean, number of times iterated
-    std::pair<double, int> getcatoni(const double, const int, double &, mabarraycpp &, const double);
+    std::pair<double, int> getcatoni(const double, const int, double, mabarraycpp &, const double);
 
     double truncatedMean(const double, const double, const int, mabarraycpp &);
 
