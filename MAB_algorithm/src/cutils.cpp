@@ -4,8 +4,8 @@
 #include "cutils.h"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <vector>
-
 namespace mabCutils {
     double catonialpha(const double v, const int itercount, const int _size) {
         double lg4t = 4.0 * std::log(double(itercount));
@@ -88,12 +88,19 @@ namespace mabCutils {
         if (k < 1) k = 1;
         int N = int(std::floor(double(arr.size()) / k));
         std::vector<double> tmp(k, 0.0);
+
+        std::cout << itercount << std::endl;
+
         for (int i = 0; i < arr.size(); ++i) {
             int b = i / N;
             if (b == k) break;
             double &v = arr[i];
-            if (std::abs(v) <= bd((i % N) + 1)) tmp[b] += v;
+            if (std::abs(v) <= bd((i % N) + 1)) {
+                if (b >= k) throw std::out_of_range("Out of range");
+                tmp[b] += v;
+            }
         }
+        std::cout << "add finish, finding median" << std::endl;
         return findmedian(tmp) / N;
     }
 
@@ -106,13 +113,30 @@ namespace mabCutils {
         return alpha * coef / (std::pow(x, maxMomentOrder + 1) * log_sq);
     }
 
-    void medianOfMeanArrayCpp::updateAvgArray() {
-        // TODO
-    }
-
     void medianOfMeanArrayCpp::updateMedianMeanArray(int binsizeN) {
-        
-        // TODO
+        auto &&pr = avgmemory[binsizeN];
+        int binCount = pr.first.size() + pr.second.size();
+
+        int maxBinCount = _len / binsizeN;
+
+        while (binCount < maxBinCount) {
+            double topush = presum[(binCount + 1) * binsizeN] - presum[binCount * binsizeN];
+
+            if (pr.first.empty() || pr.first.top() > topush)
+                pr.first.push(topush);
+            else
+                pr.second.push(topush);
+
+            if (pr.first.size() > pr.second.size() + 1) {
+                pr.second.push(pr.first.top());
+                pr.first.pop();
+            } else if (pr.first.size() + 1 < pr.second.size()) {
+                pr.first.push(pr.second.top());
+                pr.second.pop();
+            }
+
+            binCount++;
+        }
     }
 } // namespace mabCutils
 

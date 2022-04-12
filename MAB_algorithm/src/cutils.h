@@ -2,11 +2,12 @@
 #define CUTILS_H
 
 
+#include <iostream>
 #include <memory>
 #include <queue>
-#include <unordered_map>
 #include <stdexcept>
 #include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
@@ -15,26 +16,39 @@ namespace mabCutils {
     protected:
         int _cap;
         int _len;
-        std::unique_ptr<double[]> arr_unique_ptr;
-        double *arr;
+        // std::unique_ptr<double[]> arr_unique_ptr;
+        double *arr_unique_ptr = nullptr;
 
     public:
-        mabarraycpp() : _cap(0), _len(0), arr(nullptr) {}
+        mabarraycpp() : _cap(0), _len(0) {}
 
+        void operator=(mabarraycpp &) = delete;
+
+        virtual ~mabarraycpp() {
+            delete[] arr_unique_ptr;
+            arr_unique_ptr = nullptr;
+            std::cout << "destrcuting" << std::endl;
+        }
+
+    public:
         virtual void startup(int cap) {
-            arr_unique_ptr.reset(new double[_cap]);
+            std::cout << "Initializing" << std::endl;
+            // arr_unique_ptr.reset(new double[_cap]);
+            arr_unique_ptr = new double[_cap];
             _len = 0;
             _cap = cap;
-            arr = &arr_unique_ptr[0];
         }
 
         double &operator[](int index) const {
-            if (index < _len) return arr[index];
+            if (index < _len) return arr_unique_ptr[index];
             throw std::out_of_range("invalid index, expected less than " + std::to_string(_len));
         }
 
         virtual void append(double v) {
-            arr[_len] = v;
+            if (_len >= _cap) {
+                throw std::out_of_range("size is equal to capacity, cannot append new element.");
+            }
+            arr_unique_ptr[_len] = v;
             ++_len;
         }
 
@@ -42,17 +56,15 @@ namespace mabCutils {
 
         int cap() const { return _cap; }
 
-        double *begin() { return arr; }
+        double *begin() { return &arr_unique_ptr[0]; }
 
-        double *end() { return &arr[_len]; }
+        double *end() { return &arr_unique_ptr[0] + _len; }
 
         double avg() const {
             double ans = 0.0;
-            for (int i = 0; i < _len; ++i) ans += arr[i];
+            for (int i = 0; i < _len; ++i) ans += arr_unique_ptr[i];
             return ans / _len;
         }
-
-        virtual ~mabarraycpp() = default;
     };
 
     class medianOfMeanArrayCpp : public mabarraycpp {
@@ -75,21 +87,25 @@ namespace mabCutils {
         }
 
         void append(double v) override {
-            arr[_len] = v;
+            if (_len >= _cap) {
+                throw std::out_of_range("size is equal to capacity, cannot append new element.");
+            }
+            arr_unique_ptr[_len] = v;
             ++_len;
             presum[_len] = presum[_len - 1] + v;
         }
 
         double getMedianMean(int binsizeN) {
             // TODO
-            return 0.0;
+            updateMedianMeanArray(binsizeN);
+            auto &&pr = avgmemory[binsizeN];
+            if ((pr.first.size() + pr.second.size()) & 1) return pr.first.size() > pr.second.size() ? pr.first.top() : pr.second.top();
+            return (pr.first.top() + pr.second.top()) / 2.0;
         }
 
     private:
-        void updateAvgArray();
         void updateMedianMeanArray(int binsizeN);
     };
-
 
     // mean estimator
 

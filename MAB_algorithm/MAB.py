@@ -285,10 +285,13 @@ class MABAlgorithm(object):
         ans = np.zeros((number_of_iterations, len(self.columnNames)))
         for i, v in enumerate(self.run_simulation(number_of_iterations)):
             ans[i] = v
+        print(ans)
         return ans
 
     def run_to_pdframe(self, number_of_iterations: int):
-        return pd.DataFrame(self.run_simulation_tolist(number_of_iterations), columns=self.columnNames)
+        ans = pd.DataFrame(self.run_simulation_tolist(number_of_iterations), columns=self.columnNames)
+        print(ans)
+        return ans
 
     def to_pdframe(self, data: List[List[Union[float, int]]]):
         return pd.DataFrame(data, columns=self.columnNames)
@@ -530,11 +533,14 @@ class medianRobustUCB(MABAlgorithm):
     def mean(self) -> List[float]:
         vp12 = np.power(12*self.v, 1/(self.ve+1))
         lgtsqp2 = 32*np.log(self.iteration+1)+2
-        return np.array([
+        print("iterating")
+        ans = np.array([
             getMedianMean(self.v, self.ve, self.iteration+1, arr) +
             vp12*np.power(lgtsqp2/len(arr), self.ve/(self.ve+1))
             for arr in self.reward_history
         ])
+        print("finish")
+        return ans
 
     def select_arm(self, *args, **kwargs) -> int:
         if self.iteration < 2*len(self._arms):
@@ -542,7 +548,9 @@ class medianRobustUCB(MABAlgorithm):
         return np.argmax(self.mean)
 
     def _after_draw(self, chosen_arm_index: int, reward: float) -> None:
+        print("adding reward")
         self.reward_history[chosen_arm_index].add(reward)
+        print("add finish")
 
     def atSimulationStart(self, number_of_iterations: int) -> None:
         self.reward_history: List[mabarray] = [
