@@ -7,7 +7,7 @@ from distutils.extension import Extension
 setup(
     ext_modules=cythonize([Extension("mabCutils", [
         "MAB_algorithm/mabCutils.pyx",
-        "MAB_algorithm/src/cutils.cpp"
+        "MAB_algorithm/cutils.cpp"
     ])]),
     include_dirs=np.get_include(),
     options={'build_ext': {"build_lib": "MAB_algorithm"}}

@@ -24,7 +24,7 @@ def main():
         url="https://github.com/Antares0982/MAB-algorithm-template",
         ext_modules=cythonize([Extension("mabCutils", [
             f"{_PACK_NAME}/mabCutils.pyx",
-            f"{_PACK_NAME}/src/cutils.cpp"
+            f"{_PACK_NAME}/cutils.cpp"
         ])]),
         include_dirs=np.get_include(),
         options={'build_ext': {"build_lib": _PACK_NAME}},

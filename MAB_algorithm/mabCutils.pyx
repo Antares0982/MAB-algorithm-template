@@ -4,7 +4,7 @@ from libcpp.pair cimport pair
 
 # extern
 
-cdef extern from "src/cutils.h" namespace "mabCutils":
+cdef extern from "cutils.h" namespace "mabCutils":
     cdef cppclass mabarraycpp:
         mabarraycpp() except +
         void startup(const int&)
@@ -20,6 +20,7 @@ cdef extern from "src/cutils.h" namespace "mabCutils":
     double medianMean(const double, const double, const int, mabarraycpp &)
 
     double heavytail_pdf(const double, const double, const double, const double, double)
+
 
 # export: c class wrappers
 

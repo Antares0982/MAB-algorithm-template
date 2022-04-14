@@ -110,14 +110,14 @@ namespace mabCutils {
         return alpha * coef / (std::pow(x, maxMomentOrder + 1) * log_sq);
     }
 
-    void medianOfMeanArrayCpp::updateMedianMeanArray(int binsizeN) {
-        auto &&pr = avgmemory[binsizeN];
+    std::pair<medianOfMeanArrayCpp::leftQueue, medianOfMeanArrayCpp::rightQueue> &medianOfMeanArrayCpp::updateMedianMeanArray(int binsizeN) const {
+        auto &pr = avgmemory[binsizeN];
         int binCount = pr.first.size() + pr.second.size();
 
         int maxBinCount = _len / binsizeN;
 
         while (binCount < maxBinCount) {
-            double topush = presum[(binCount + 1) * binsizeN] - presum[binCount * binsizeN];
+            double topush = presum_unique_ptr[(binCount + 1) * binsizeN] - presum_unique_ptr[binCount * binsizeN];
 
             if (pr.first.empty() || pr.first.top() > topush)
                 pr.first.push(topush);
@@ -134,6 +134,8 @@ namespace mabCutils {
 
             binCount++;
         }
+
+        return pr;
     }
 } // namespace mabCutils
 

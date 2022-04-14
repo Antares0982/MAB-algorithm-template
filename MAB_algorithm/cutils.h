@@ -21,8 +21,6 @@ namespace mabCutils {
     public:
         mabarraycpp() : _cap(0), _len(0) {}
 
-        void operator=(mabarraycpp &) = delete;
-
         virtual ~mabarraycpp() = default;
 
     public:
@@ -32,9 +30,12 @@ namespace mabCutils {
             _cap = cap;
         }
 
-        double &operator[](int index) const {
-            if (index < _len) return arr_unique_ptr[index];
-            throw std::out_of_range("invalid index, expected less than " + std::to_string(_len));
+        double &operator[](int index) {
+            return __get_index__(index);
+        }
+
+        const double &operator[](int index) const {
+            return __get_index__(index);
         }
 
         virtual void append(double v) {
@@ -51,32 +52,42 @@ namespace mabCutils {
 
         double *begin() { return &arr_unique_ptr[0]; }
 
+        const double *begin() const { return &arr_unique_ptr[0]; }
+
         double *end() { return &arr_unique_ptr[0] + _len; }
+
+        const double *end() const { return &arr_unique_ptr[0] + _len; }
 
         double avg() const {
             double ans = 0.0;
             for (int i = 0; i < _len; ++i) ans += arr_unique_ptr[i];
             return ans / _len;
         }
+
+    private:
+        double &__get_index__(int index) const {
+            if (index < _len) return arr_unique_ptr[index];
+            throw std::out_of_range("invalid index, expected less than " + std::to_string(_len));
+        }
     };
 
     class medianOfMeanArrayCpp : public mabarraycpp {
-    private:
+    private: // typedefs
         using leftQueue = std::priority_queue<double>;
         using rightQueue = std::priority_queue<double, std::vector<double>, std::greater<double>>;
-        std::unordered_map<int, std::pair<leftQueue, rightQueue>> avgmemory;
+        using memory_iterator = std::unordered_map<int, std::pair<leftQueue, rightQueue>>::iterator;
+
+    private:
         std::unique_ptr<double[]> presum_unique_ptr;
-        double *presum;
-        double medianMean;
+        // run-time evaluate mutable object `avgmemory`
+        mutable std::unordered_map<int, std::pair<leftQueue, rightQueue>> avgmemory;
 
     public:
-        medianOfMeanArrayCpp() : mabarraycpp(), presum(nullptr) {}
+        medianOfMeanArrayCpp() : mabarraycpp() {}
 
         void startup(int cap) override {
             mabarraycpp::startup(cap);
             presum_unique_ptr.reset(new double[cap + 1]);
-            presum = &presum_unique_ptr[0];
-            *presum = 0;
         }
 
         void append(double v) override {
@@ -85,19 +96,17 @@ namespace mabCutils {
             }
             arr_unique_ptr[_len] = v;
             ++_len;
-            presum[_len] = presum[_len - 1] + v;
+            presum_unique_ptr[_len] = presum_unique_ptr[_len - 1] + v;
         }
 
-        double getMedianMean(int binsizeN) {
-            // TODO
-            updateMedianMeanArray(binsizeN);
-            auto &&pr = avgmemory[binsizeN];
-            if ((pr.first.size() + pr.second.size()) & 1) return pr.first.size() > pr.second.size() ? pr.first.top() : pr.second.top();
+        double getMedianMean(int binsizeN) const {
+            auto &pr = updateMedianMeanArray(binsizeN);
+            if ((pr.first.size() + pr.second.size()) & 1) return (pr.first.size() > pr.second.size()) ? pr.first.top() : pr.second.top();
             return (pr.first.top() + pr.second.top()) / 2.0;
         }
 
     private:
-        void updateMedianMeanArray(int binsizeN);
+        std::pair<leftQueue, rightQueue> &updateMedianMeanArray(int binsizeN) const;
     };
 
     // mean estimator
