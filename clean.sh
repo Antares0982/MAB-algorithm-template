@@ -12,6 +12,7 @@ fi
 
 rm -rf dist
 rm -rf build
+rm -rf wheelhouse
 rm -rf MAB_algorithm.egg-info
 rm -f MAB_algorithm/mabCutils.cpp
 rm MAB_algorithm/*.so

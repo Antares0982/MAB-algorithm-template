@@ -4,7 +4,7 @@ from libcpp.pair cimport pair
 
 # extern
 
-cdef extern from "cutils.cpp" namespace "mabCutils":
+cdef extern from "cutils.h" namespace "mabCutils":
     cdef cppclass mabarraycpp:
         mabarraycpp() except +
         void startup(const int&)

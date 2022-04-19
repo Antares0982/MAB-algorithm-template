@@ -15,7 +15,7 @@ except ImportError:
 
 extensions = [
     Extension("MAB_algorithm.mabCutils", [
-              "MAB_algorithm/mabCutils.cpp"], language="c++"),
+              "MAB_algorithm/mabCutils.cpp", "MAB_algorithm/cutils.cpp"], language="c++"),
 ]
 
 CYTHONIZE = bool(int(os.getenv("CYTHONIZE", 0))) and cythonize is not None

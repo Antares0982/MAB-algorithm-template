@@ -1,161 +1,73 @@
-#ifndef CUTILS_CPP
-#define CUTILS_CPP
-
+#include "cutils.h"
 #include <algorithm>
 #include <cmath>
-#include <iostream>
-#include <memory>
-#include <queue>
-#include <stdexcept>
 #include <string>
-#include <unordered_map>
-#include <utility>
 #include <vector>
 
+
 namespace mabCutils {
-    class mabarraycpp {
-    protected:
-        int _cap;
-        int _len;
-        std::unique_ptr<double[]> arr_unique_ptr;
+    // class member function definition
+    std::pair<medianOfMeanArrayCpp::leftQueue, medianOfMeanArrayCpp::rightQueue> &medianOfMeanArrayCpp::updateMedianMeanArray(int binsizeN) const {
+        auto &pr = avgmemory[binsizeN];
+        int binCount = pr.first.size() + pr.second.size();
 
-    public:
-        mabarraycpp() : _cap(0), _len(0) {}
+        int maxBinCount = _len / binsizeN;
 
-        virtual ~mabarraycpp() = default;
+        while (binCount < maxBinCount) {
+            double topush = presum_unique_ptr[(binCount + 1) * binsizeN] - presum_unique_ptr[binCount * binsizeN];
 
-    public:
-        virtual void startup(int cap) {
-            arr_unique_ptr.reset(new double[cap]);
-            _len = 0;
-            _cap = cap;
-        }
+            if (pr.first.empty() || pr.first.top() > topush)
+                pr.first.push(topush);
+            else
+                pr.second.push(topush);
 
-        double &operator[](int index) {
-            return __get_index__(index);
-        }
-
-        const double &operator[](int index) const {
-            return __get_index__(index);
-        }
-
-        virtual void append(double v) {
-            if (_len >= _cap) {
-                throw std::out_of_range("size is equal to capacity, cannot append new element.");
+            if (pr.first.size() > pr.second.size() + 1) {
+                pr.second.push(pr.first.top());
+                pr.first.pop();
+            } else if (pr.first.size() + 1 < pr.second.size()) {
+                pr.first.push(pr.second.top());
+                pr.second.pop();
             }
-            arr_unique_ptr[_len] = v;
-            ++_len;
+
+            binCount++;
         }
 
-        int size() const { return _len; }
-
-        int cap() const { return _cap; }
-
-        double *begin() { return &arr_unique_ptr[0]; }
-
-        const double *begin() const { return &arr_unique_ptr[0]; }
-
-        double *end() { return &arr_unique_ptr[0] + _len; }
-
-        const double *end() const { return &arr_unique_ptr[0] + _len; }
-
-        double avg() const {
-            double ans = 0.0;
-            for (int i = 0; i < _len; ++i) ans += arr_unique_ptr[i];
-            return ans / _len;
-        }
-
-    private:
-        double &__get_index__(int index) const {
-            if (index < _len) return arr_unique_ptr[index];
-            throw std::out_of_range("invalid index, expected less than " + std::to_string(_len));
-        }
-    };
-
-    class medianOfMeanArrayCpp : public mabarraycpp {
-    private: // typedefs
-        using leftQueue = std::priority_queue<double>;
-        using rightQueue = std::priority_queue<double, std::vector<double>, std::greater<double>>;
-        using memory_iterator = std::unordered_map<int, std::pair<leftQueue, rightQueue>>::iterator;
-
-    private:
-        std::unique_ptr<double[]> presum_unique_ptr;
-        // run-time evaluate mutable object `avgmemory`
-        mutable std::unordered_map<int, std::pair<leftQueue, rightQueue>> avgmemory;
-
-    public:
-        medianOfMeanArrayCpp() : mabarraycpp() {}
-
-        void startup(int cap) override {
-            mabarraycpp::startup(cap);
-            presum_unique_ptr.reset(new double[cap + 1]);
-        }
-
-        void append(double v) override {
-            if (_len >= _cap) {
-                throw std::out_of_range("size is equal to capacity, cannot append new element.");
-            }
-            arr_unique_ptr[_len] = v;
-            ++_len;
-            presum_unique_ptr[_len] = presum_unique_ptr[_len - 1] + v;
-        }
-
-        double getMedianMean(int binsizeN) const {
-            auto &pr = updateMedianMeanArray(binsizeN);
-            if ((pr.first.size() + pr.second.size()) & 1) return (pr.first.size() > pr.second.size()) ? pr.first.top() : pr.second.top();
-            return (pr.first.top() + pr.second.top()) / 2.0;
-        }
-
-    private:
-        std::pair<leftQueue, rightQueue> &updateMedianMeanArray(int binsizeN) const;
-    };
-
-    // mean estimator
-
-    // Returns: catoni mean, number of times iterated
-    // std::pair<double, int> getcatoni(const double, const int, double, mabarraycpp &, const double);
-
-    // double truncatedMean(const double, const double, const int, mabarraycpp &);
-
-    // double medianMean(const double, const double, const int, mabarraycpp &);
-
-    // distns utils
-    // double heavytail_pdf(const double, const double, const double, const double, double);
-
+        return pr;
+    }
     // begin function def
 
-    double catonialpha(const double v, const int itercount, const int _size) {
+    inline double catonialpha(const double v, const int itercount, const int _size) {
         double lg4t = 4.0 * std::log(double(itercount));
         return std::sqrt(lg4t / (double(_size) * (v + v * lg4t / (double(_size) - lg4t))));
     }
 
-    double psi(const double x) {
+    inline double psi(const double x) {
         if (x < 0) return -psi(-x);
         if (x > 1) return std::log(2 * x - 1) / 4 + 5.0 / 6;
         return x - x * x * x / 6;
     }
 
-    double dpsi(const double x) {
+    inline double dpsi(const double x) {
         if (x < 0) return dpsi(-x);
         if (x > 1) return 1.0 / (4 * x - 2);
         return 1.0 - x * x / 2;
     }
 
-    double sumpsi(const double v, const int itercount, const double guess, mabarraycpp &arr) {
+    inline double sumpsi(const double v, const int itercount, const double guess, mabarraycpp &arr) {
         double ans = 0.0;
         auto a_d = catonialpha(v, itercount, arr.size());
         for (int i = 0; i < arr.size(); ++i) ans += psi(a_d * (arr[i] - guess));
         return ans;
     }
 
-    double dsumpsi(const double v, const int itercount, const double guess, mabarraycpp &arr) {
+    inline double dsumpsi(const double v, const int itercount, const double guess, mabarraycpp &arr) {
         double ans = 0.0;
         auto a_d = catonialpha(v, itercount, arr.size());
         for (int i = 0; i < arr.size(); ++i) ans += dpsi(a_d * (arr[i] - guess));
         return -a_d * ans;
     }
 
-    double nt_iter(const double v, const int itercount, const double guess, mabarraycpp &arr, const double fguess) {
+    inline double nt_iter(const double v, const int itercount, const double guess, mabarraycpp &arr, const double fguess) {
         return guess - fguess / dsumpsi(v, itercount, guess, arr);
     }
 
@@ -167,6 +79,7 @@ namespace mabCutils {
         return ((*it) + vec[mind]) / 2;
     }
 
+    // implement interfaces
     // mean sestimator
     std::pair<double, int> getcatoni(const double v, const int itercount, double guess, mabarraycpp &arr, const double tol) {
         auto a = sumpsi(v, itercount, guess, arr);
@@ -226,34 +139,4 @@ namespace mabCutils {
         log_sq *= log_sq;
         return alpha * coef / (std::pow(x, maxMomentOrder + 1) * log_sq);
     }
-
-    std::pair<medianOfMeanArrayCpp::leftQueue, medianOfMeanArrayCpp::rightQueue> &medianOfMeanArrayCpp::updateMedianMeanArray(int binsizeN) const {
-        auto &pr = avgmemory[binsizeN];
-        int binCount = pr.first.size() + pr.second.size();
-
-        int maxBinCount = _len / binsizeN;
-
-        while (binCount < maxBinCount) {
-            double topush = presum_unique_ptr[(binCount + 1) * binsizeN] - presum_unique_ptr[binCount * binsizeN];
-
-            if (pr.first.empty() || pr.first.top() > topush)
-                pr.first.push(topush);
-            else
-                pr.second.push(topush);
-
-            if (pr.first.size() > pr.second.size() + 1) {
-                pr.second.push(pr.first.top());
-                pr.first.pop();
-            } else if (pr.first.size() + 1 < pr.second.size()) {
-                pr.first.push(pr.second.top());
-                pr.second.pop();
-            }
-
-            binCount++;
-        }
-
-        return pr;
-    }
 } // namespace mabCutils
-
-#endif // CUTILS_CPP
