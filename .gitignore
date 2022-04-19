@@ -1,5 +1,7 @@
 # self defined
+MAB_algorithm/mabCutils.cpp
 *test.py
+wheelhouse/
 !test/
 !test/*
 *.log

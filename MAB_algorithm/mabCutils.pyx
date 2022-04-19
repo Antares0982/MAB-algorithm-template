@@ -4,7 +4,7 @@ from libcpp.pair cimport pair
 
 # extern
 
-cdef extern from "cutils.h" namespace "mabCutils":
+cdef extern from "cutils.cpp" namespace "mabCutils":
     cdef cppclass mabarraycpp:
         mabarraycpp() except +
         void startup(const int&)
@@ -13,13 +13,13 @@ cdef extern from "cutils.h" namespace "mabCutils":
         double avg()
         double& operator[](const int&)
 
-    pair[double, int] getcatoni(const double, const int, double &, mabarraycpp &, const double)
+    cdef pair[double, int] getcatoni(const double, const int, double &, mabarraycpp &, const double)
 
-    double truncatedMean(const double, const double, const int, mabarraycpp &)
+    cdef double truncatedMean(const double, const double, const int, mabarraycpp &)
 
-    double medianMean(const double, const double, const int, mabarraycpp &)
+    cdef double medianMean(const double, const double, const int, mabarraycpp &)
 
-    double heavytail_pdf(const double, const double, const double, const double, double)
+    cdef double heavytail_pdf(const double, const double, const double, const double, double)
 
 
 # export: c class wrappers
