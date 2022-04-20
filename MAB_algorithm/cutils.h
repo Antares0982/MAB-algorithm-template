@@ -2,11 +2,12 @@
 #define CUTILS_H
 
 
+#include <cmath>
 #include <memory>
 #include <queue>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
-
 
 namespace mabCutils {
     class mabarraycpp {
@@ -64,7 +65,7 @@ namespace mabCutils {
     private:
         double &__get_index__(int index) const {
             if (index < _len) return arr_unique_ptr[index];
-            throw std::out_of_range("invalid index, expected less than " + std::to_string(_len));
+            throw std::out_of_range("invalid index, expected less than " + std::to_string(_len) + ", got " + std::to_string(index));
         }
     };
 
@@ -96,14 +97,16 @@ namespace mabCutils {
             presum_unique_ptr[_len] = presum_unique_ptr[_len - 1] + v;
         }
 
-        double getMedianMean(int binsizeN) const {
-            auto &pr = updateMedianMeanArray(binsizeN);
+        double getMedianMean(int iteration) const {
+            int k = std::max(1, int(std::floor(std::min(1 + 16 * std::log(iteration), double(_len) / 2))));
+            int binsizeN = _len / k;
+            auto &pr = updateMedianMeanArray(k, binsizeN);
             if ((pr.first.size() + pr.second.size()) & 1) return (pr.first.size() > pr.second.size()) ? pr.first.top() : pr.second.top();
             return (pr.first.top() + pr.second.top()) / 2.0;
         }
 
     private:
-        std::pair<leftQueue, rightQueue> &updateMedianMeanArray(int binsizeN) const;
+        std::pair<leftQueue, rightQueue> &updateMedianMeanArray(int k, int binsizeN) const;
     };
 
     // mean estimator
@@ -113,7 +116,7 @@ namespace mabCutils {
 
     double truncatedMean(const double, const double, const int, mabarraycpp &);
 
-    double medianMean(const double, const double, const int, mabarraycpp &);
+    double medianMean(const int, mabarraycpp &);
 
     // distns utils
     double heavytail_pdf(const double, const double, const double, const double, double);

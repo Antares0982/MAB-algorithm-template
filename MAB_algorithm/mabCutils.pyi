@@ -55,7 +55,7 @@ class medianOfMeanArray(object):
     def __len__(self) -> int: ...
     def __getitem__(self, index: int) -> float: ...
     def __setitem__(self, index: int, value: float): ...
-    def medianMean(self, binsizeN: int) -> float: ...
+    def medianMean(self, iteration: int) -> float: ...
 
 
 def getCatoniMean(
@@ -90,8 +90,6 @@ def getTruncatedMean(
 
 
 def getMedianMean(
-    v: float,
-    ve: float,
     iteration: int,
     arr: mabarray
 ) -> float:

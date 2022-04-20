@@ -1,20 +1,16 @@
 #include "cutils.h"
 #include <algorithm>
-#include <cmath>
-#include <string>
+#include <iostream>
 #include <vector>
-
 
 namespace mabCutils {
     // class member function definition
-    std::pair<medianOfMeanArrayCpp::leftQueue, medianOfMeanArrayCpp::rightQueue> &medianOfMeanArrayCpp::updateMedianMeanArray(int binsizeN) const {
+    std::pair<medianOfMeanArrayCpp::leftQueue, medianOfMeanArrayCpp::rightQueue> &medianOfMeanArrayCpp::updateMedianMeanArray(int k, int binsizeN) const {
         auto &pr = avgmemory[binsizeN];
         int binCount = pr.first.size() + pr.second.size();
 
-        int maxBinCount = _len / binsizeN;
-
-        while (binCount < maxBinCount) {
-            double topush = presum_unique_ptr[(binCount + 1) * binsizeN] - presum_unique_ptr[binCount * binsizeN];
+        while (binCount < k) {
+            double topush = (presum_unique_ptr[(binCount + 1) * binsizeN] - presum_unique_ptr[binCount * binsizeN]) / binsizeN;
 
             if (pr.first.empty() || pr.first.top() > topush)
                 pr.first.push(topush);
@@ -108,26 +104,18 @@ namespace mabCutils {
         return ans / arr.size();
     }
 
-    double medianMean(const double v, const double ve, const int itercount, mabarraycpp &arr) {
-        double ee = v / (2 * std::log(itercount));
-        double vinv = 1 / (ve + 1);
-        auto bd = [&](const int &x) {
-            return std::pow(ee * x, vinv);
-        };
-        int k = int(std::floor(std::min(1 + 16 * std::log(itercount), double(arr.size()) / 2)));
-        if (k < 1) k = 1;
-        int N = int(std::floor(double(arr.size()) / k));
+    double medianMean(const int itercount, mabarraycpp &arr) {
+        int k = std::max(1, int(std::floor(std::min(1 + 16 * std::log(itercount), double(arr.size()) / 2))));
+        int N = arr.size() / k;
         std::vector<double> tmp(k, 0.0);
 
         for (int i = 0; i < arr.size(); ++i) {
             int b = i / N;
             if (b == k) break;
             double v = arr[i];
-            if (std::abs(v) <= bd((i % N) + 1)) {
-                if (b >= k) throw std::out_of_range("Out of range");
-                tmp[b] += v;
-            }
+            tmp[b] += v;
         }
+
         return findmedian(tmp) / N;
     }
 

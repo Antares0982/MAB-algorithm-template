@@ -531,7 +531,7 @@ class medianRobustUCB(MABAlgorithm):
         vp12 = np.power(12*self.v, 1/(self.ve+1))
         lgtsqp2 = 32*np.log(self.iteration+1)+2
         ans = np.array([
-            getMedianMean(self.v, self.ve, self.iteration+1, arr) +
+            getMedianMean(self.iteration+1, arr) +
             vp12*np.power(lgtsqp2/len(arr), self.ve/(self.ve+1))
             for arr in self.reward_history
         ])
