@@ -10,15 +10,17 @@ In probability theory and machine learning, the **multi-armed bandit problem** i
 
 ### How To Use
 
-Requiring python3. First, install dependencies:
+Requiring python3.
 
 ```python
-pip install -r requirements.txt
+pip3 install MAB-algorithm
 ```
+
+### A Brief Introduction
 
 ##### Arms
 
-An MAB model includes a list of arms. This template has defined several arms with different distributions, for example, to define 10 arms with truncacted normal distribution:
+An MAB model includes a list of arms. This template has defined several arms with different distributions, for example, to define 10 arms with truncated normal distribution:
 
 ```python
 from MAB_algorithm import *

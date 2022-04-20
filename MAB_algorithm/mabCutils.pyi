@@ -37,6 +37,27 @@ class mabarray(object):
     def __setitem__(self, index: int, value: float): ...
 
 
+class medianOfMeanArray(object):
+    """
+    The wrapper class of C++ class `medianOfMeanArray`. `medianOfMeanArray` is
+    a subclass of `mabarray` in C++; it provides all functionality of mabarray, 
+    and also a fast way to compute median of means.
+
+    Note:
+        * `medianOfMeanArray` also stores presum and means, which will 
+            cost much more space than `mabarray`.
+        * :method:`medianMean()` has an average time cost O(log n).
+    """
+
+    def __init__(self, maxsize: int) -> None: ...
+    def add(self, v: float) -> None: ...
+    def avg(self) -> float: ...
+    def __len__(self) -> int: ...
+    def __getitem__(self, index: int) -> float: ...
+    def __setitem__(self, index: int, value: float): ...
+    def medianMean(self, binsizeN: int) -> float: ...
+
+
 def getCatoniMean(
     v: float,
     iteration: int,

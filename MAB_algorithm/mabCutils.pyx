@@ -7,11 +7,21 @@ from libcpp.pair cimport pair
 cdef extern from "cutils.h" namespace "mabCutils":
     cdef cppclass mabarraycpp:
         mabarraycpp() except +
-        void startup(const int&)
+        void startup(int)
         int size()
-        void append(const double&)
+        void append(double)
         double avg()
-        double& operator[](const int&)
+        double& operator[](int)
+
+    cdef cppclass medianOfMeanArrayCpp:
+        medianOfMeanArrayCpp() except +
+        void startup(int)
+        int size()
+        void append(double)
+        double avg()
+        double& operator[](int)
+        # extra interface
+        double getMedianMean(int)
 
     cdef pair[double, int] getcatoni(const double, const int, double &, mabarraycpp &, const double)
 
@@ -20,7 +30,6 @@ cdef extern from "cutils.h" namespace "mabCutils":
     cdef double medianMean(const double, const double, const int, mabarraycpp &)
 
     cdef double heavytail_pdf(const double, const double, const double, const double, double)
-
 
 # export: c class wrappers
 
@@ -44,6 +53,30 @@ cdef class mabarray:
 
     def __setitem__(self, const int key, const double val):
         self.wrapped[key] = val
+
+cdef class medianOfMeanArray:
+    cdef medianOfMeanArrayCpp wrapped
+
+    def __cinit__(self, const int maxsize):
+        self.wrapped.startup(maxsize)
+
+    def add(self, const double v):
+        self.wrapped.append(v)
+
+    def avg(self):
+        return self.wrapped.avg()
+
+    def __len__(self):
+        return self.wrapped.size()
+
+    def __getitem__(self, const int index):
+        return self.wrapped[index]
+
+    def __setitem__(self, const int key, const double val):
+        self.wrapped[key] = val
+
+    def medianMean(self, int binsizeN):
+        return self.wrapped.getMedianMean(binsizeN)
 
 # export: c function wrappers
 
