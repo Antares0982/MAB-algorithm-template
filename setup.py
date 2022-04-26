@@ -5,7 +5,7 @@ _VERSION_ = "0.0.5"
 if _VERSION_:
     import os
 
-    from setuptools import Extension, find_packages, setup
+    from setuptools import Extension, setup
 
 
 try:
@@ -39,4 +39,5 @@ setup(
     ext_modules=extensions,
     install_requires=install_requires,
     packages=[_PACK_NAME_],
+    package_data={_PACK_NAME_: ["*.pyi"]}
 )

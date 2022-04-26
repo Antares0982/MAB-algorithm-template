@@ -62,6 +62,8 @@ namespace mabCutils {
             return ans / _len;
         }
 
+        double momentMedianOfMean(double theta, double q, int k) const;
+
     private:
         double &__get_index__(int index) const {
             if (index < _len) return arr_unique_ptr[index];

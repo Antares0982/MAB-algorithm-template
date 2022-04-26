@@ -5,6 +5,22 @@
 
 namespace mabCutils {
     // class member function definition
+    double mabarraycpp::momentMedianOfMean(double theta, double q, int k) const {
+        int binsizeN = _len / k;
+
+        if (binsizeN < 1) throw std::out_of_range("Invalid bin number " + std::to_string(k));
+        int total = binsizeN * k;
+
+        std::vector<double> means;
+        means.reserve(k);
+
+        for (auto p = begin(); p != begin() + total; ++p) {
+            means[(p - begin()) / binsizeN] += std::pow(std::abs(*p - theta), q);
+        }
+
+        return findmedian(means) / binsizeN;
+    }
+
     std::pair<medianOfMeanArrayCpp::leftQueue, medianOfMeanArrayCpp::rightQueue> &medianOfMeanArrayCpp::updateMedianMeanArray(int k, int binsizeN) const {
         auto &pr = avgmemory[binsizeN];
         int binCount = pr.first.size() + pr.second.size();
