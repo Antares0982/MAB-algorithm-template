@@ -62,7 +62,7 @@ namespace mabCutils {
             return ans / _len;
         }
 
-        double momentMedianOfMean(double theta, double q, int k) const;
+        double momentMedianOfMean(const double theta, const double q, const int k) const;
 
     private:
         double &__get_index__(int index) const {
@@ -77,7 +77,7 @@ namespace mabCutils {
         using rightQueue = std::priority_queue<double, std::vector<double>, std::greater<double>>;
         using memory_iterator = std::unordered_map<int, std::pair<leftQueue, rightQueue>>::iterator;
 
-    private:
+    private: // members
         std::unique_ptr<double[]> presum_unique_ptr;
         // run-time evaluate mutable object `avgmemory`
         mutable std::unordered_map<int, std::pair<leftQueue, rightQueue>> avgmemory;

@@ -27,6 +27,20 @@ if CYTHONIZE:
 
 install_requires = "numpy scipy pandas matplotlib".split()
 
+
+def findDataFiles() -> list:
+    """
+    Find all data files in the package.
+    """
+    dataFiles = []
+    for root, dirs, files in os.walk(_PACK_NAME_):
+        for file in files:
+            if not file.endswith(".pyi"):
+                continue
+            dataFiles.append(file)
+    return dataFiles
+
+
 setup(
     name=_PACK_NAME_,
     version=_VERSION_,
@@ -39,5 +53,5 @@ setup(
     ext_modules=extensions,
     install_requires=install_requires,
     packages=[_PACK_NAME_],
-    package_data={_PACK_NAME_: ["*.pyi"]}
+    package_data={_PACK_NAME_: findDataFiles()}
 )

@@ -4,8 +4,11 @@
 #include <vector>
 
 namespace mabCutils {
+    // function declaration
+    double findmedian(std::vector<double> &vec);
+
     // class member function definition
-    double mabarraycpp::momentMedianOfMean(double theta, double q, int k) const {
+    double mabarraycpp::momentMedianOfMean(const double theta, const double q, const int k) const {
         int binsizeN = _len / k;
 
         if (binsizeN < 1) throw std::out_of_range("Invalid bin number " + std::to_string(k));
