@@ -7,7 +7,7 @@ import os
 
 
 _PACK_NAME_ = "MAB_algorithm"
-_VERSION_ = "0.0.5"
+_VERSION_ = "0.0.6"
 
 
 def main():

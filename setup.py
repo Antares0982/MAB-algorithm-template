@@ -1,5 +1,5 @@
 _PACK_NAME_ = "MAB_algorithm"
-_VERSION_ = "0.0.5"
+_VERSION_ = "0.0.6"
 # don't modify packname and version above
 # PACK_NAME and VERSION should be declared in first two lines
 if _VERSION_:
