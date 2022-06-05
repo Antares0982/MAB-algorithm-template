@@ -24,16 +24,16 @@ class robustUCB_test(unittest.TestCase):
         print("v=", v)
 
         algos: List[Type[MABAlgorithm]] = [
-            truncatedRobustUCB,
             medianRobustUCB,
+            truncatedRobustUCB,
             CatoniRobustUCB
         ]
         algoname = [x.__name__ for x in algos]
         kwargss = [
             # assume moment upper bound is same as variance
-            {"ve": (_MAX_MOMENTORDER-1)/2, "u": v},
-            # assume moment upper bound is same as variance
             {"ve": (_MAX_MOMENTORDER-1)/2, "v": v},
+            # assume moment upper bound is same as variance
+            {"ve": (_MAX_MOMENTORDER-1)/2, "u": v},
             {"v": v}
         ]
 

@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 
 from MAB_algorithm.arm import armList, Arm
-from MAB_algorithm.mabCutils import (getCatoniMean, getMedianMean,
-                                     getTruncatedMean, mabarray)
+from MAB_algorithm.mabCutils import (calculateCatoniMean, calculateMedianMean,
+                                     calculateTruncatedMean, mabarray, medianOfMeanArray)
 
 
 __all__ = [
@@ -455,7 +455,7 @@ class truncatedRobustUCB(MABAlgorithm):
         lgtsq = np.log(self.iteration+1)*2
         up4 = 4*np.power(self.u, 1/(self.ve+1))
         return np.array([
-            getTruncatedMean(self.u, self.ve, self.iteration+1, arr) +
+            calculateTruncatedMean(self.u, self.ve, self.iteration+1, arr) +
             up4*np.power(lgtsq/len(arr), self.ve/(self.ve+1))
             for arr in self.reward_history
         ])
@@ -494,7 +494,7 @@ class medianRobustUCB(MABAlgorithm):
     def _init(self, ve: float, v: float):
         self.ve = ve
         self.v = v
-        self.reward_history: List[mabarray] = [
+        self.reward_history: List[medianOfMeanArray] = [
             None for _ in range(len(self._arms))
         ]
 
@@ -530,11 +530,19 @@ class medianRobustUCB(MABAlgorithm):
     def mean(self) -> List[float]:
         vp12 = np.power(12*self.v, 1/(self.ve+1))
         lgtsqp2 = 32*np.log(self.iteration+1)+2
-        ans = np.array([
-            getMedianMean(self.iteration+1, arr) +
-            vp12*np.power(lgtsqp2/len(arr), self.ve/(self.ve+1))
-            for arr in self.reward_history
-        ])
+
+        def bin(arr):
+            return np.max([
+                1,
+                np.floor(np.min([
+                    16*np.log(self.iteration+1)+1,
+                    len(arr)/2
+                ]))
+            ]).astype(int)
+        ans = np.array([arr.medianMean(self.iteration+1, bin(arr))
+                        + vp12*np.power(lgtsqp2/len(arr), self.ve/(self.ve+1))
+                        for arr in self.reward_history
+                        ])
         return ans
 
     def select_arm(self, *args, **kwargs) -> int:
@@ -546,8 +554,8 @@ class medianRobustUCB(MABAlgorithm):
         self.reward_history[chosen_arm_index].add(reward)
 
     def atSimulationStart(self, number_of_iterations: int) -> None:
-        self.reward_history: List[mabarray] = [
-            mabarray(number_of_iterations) for _ in range(len(self._arms))
+        self.reward_history: List[medianOfMeanArray] = [
+            medianOfMeanArray(number_of_iterations) for _ in range(len(self._arms))
         ]
 
 
@@ -623,7 +631,7 @@ class CatoniRobustUCB(MABAlgorithm):
         return ans
 
     def get_Catoni_mean(self, index: int) -> float:
-        a = getCatoniMean(
+        a = calculateCatoniMean(
             self.v,
             self.iteration+1,
             self._last_catoni_mean[index],

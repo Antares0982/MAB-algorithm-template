@@ -96,7 +96,7 @@ namespace mabCutils {
 
     // implement interfaces
     // mean sestimator
-    std::pair<double, int> getcatoni(const double v, const int itercount, double guess, mabarraycpp &arr, const double tol) {
+    std::pair<double, int> _calculateCatoniMean(const double v, const int itercount, double guess, mabarraycpp &arr, const double tol) {
         auto a = sumpsi(v, itercount, guess, arr);
         int nt_itercount = 0;
         auto a_d = catonialpha(v, itercount, arr.size());
@@ -109,7 +109,7 @@ namespace mabCutils {
         return {guess, nt_itercount};
     }
 
-    double truncatedMean(const double u, const double ve, const int itercount, mabarraycpp &arr) {
+    double _calculateTruncatedMean(const double u, const double ve, const int itercount, mabarraycpp &arr) {
         double ee = u / (2 * std::log(itercount));
         double vinv = 1 / (ve + 1);
         auto bd = [&](const double &x) {
@@ -123,14 +123,14 @@ namespace mabCutils {
         return ans / arr.size();
     }
 
-    double medianMean(const int itercount, mabarraycpp &arr) {
-        int k = std::max(1, int(std::floor(std::min(1 + 16 * std::log(itercount), double(arr.size()) / 2))));
-        int N = arr.size() / k;
-        std::vector<double> tmp(k, 0.0);
+    double _calculateMedianMean(const int itercount, const int bins, mabarraycpp &arr) {
+        // int k = std::max(1, int(std::floor(std::min(1 + 16 * std::log(itercount), double(arr.size()) / 2))));
+        int N = arr.size() / bins;
+        std::vector<double> tmp(bins, 0.0);
 
         for (int i = 0; i < arr.size(); ++i) {
             int b = i / N;
-            if (b == k) break;
+            if (b == bins) break;
             double v = arr[i];
             tmp[b] += v;
         }

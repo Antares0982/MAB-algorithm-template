@@ -99,10 +99,10 @@ namespace mabCutils {
             presum_unique_ptr[_len] = presum_unique_ptr[_len - 1] + v;
         }
 
-        double getMedianMean(int iteration) const {
-            int k = std::max(1, int(std::floor(std::min(1 + 16 * std::log(iteration), double(_len) / 2))));
-            int binsizeN = _len / k;
-            auto &pr = updateMedianMeanArray(k, binsizeN);
+        double getMedianMean(int iteration, int bins) const {
+            // int k = std::max(1, int(std::floor(std::min(1 + 16 * std::log(iteration), double(_len) / 2))));
+            int binsizeN = _len / bins;
+            auto &pr = updateMedianMeanArray(bins, binsizeN);
             if ((pr.first.size() + pr.second.size()) & 1) return (pr.first.size() > pr.second.size()) ? pr.first.top() : pr.second.top();
             return (pr.first.top() + pr.second.top()) / 2.0;
         }
@@ -114,11 +114,11 @@ namespace mabCutils {
     // mean estimator
 
     // Returns: catoni mean, number of times iterated
-    std::pair<double, int> getcatoni(const double, const int, double, mabarraycpp &, const double);
+    std::pair<double, int> _calculateCatoniMean(const double, const int, double, mabarraycpp &, const double);
 
-    double truncatedMean(const double, const double, const int, mabarraycpp &);
+    double _calculateTruncatedMean(const double, const double, const int, mabarraycpp &);
 
-    double medianMean(const int, mabarraycpp &);
+    double _calculateMedianMean(const int, const int, mabarraycpp &);
 
     // distns utils
     double heavytail_pdf(const double, const double, const double, const double, double);

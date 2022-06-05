@@ -55,10 +55,10 @@ class medianOfMeanArray(object):
     def __len__(self) -> int: ...
     def __getitem__(self, index: int) -> float: ...
     def __setitem__(self, index: int, value: float): ...
-    def medianMean(self, iteration: int) -> float: ...
+    def medianMean(self, iteration: int, bins: int) -> float: ...
 
 
-def getCatoniMean(
+def calculateCatoniMean(
     v: float,
     iteration: int,
     guess: float,
@@ -74,7 +74,7 @@ def getCatoniMean(
     ...
 
 
-def getTruncatedMean(
+def calculateTruncatedMean(
     u: float,
     ve: float,
     iteration: int,
@@ -89,8 +89,9 @@ def getTruncatedMean(
     ...
 
 
-def getMedianMean(
+def calculateMedianMean(
     iteration: int,
+    bins: int,
     arr: mabarray
 ) -> float:
     """
