@@ -101,6 +101,7 @@ namespace mabCutils {
         return guess - fguess / dsumpsi(v, itercount, guess, arr);
     }
 
+    // find the median of a given vector
     double findmedian(std::vector<double> &vec) {
         int mind = vec.size() / 2;
         std::nth_element(vec.begin(), vec.begin() + mind, vec.end());
@@ -125,15 +126,13 @@ namespace mabCutils {
     }
 
     double _calculateTruncatedMean(const double u, const double ve, const int itercount, mabarraycpp &arr) {
-        double ee = u / (2 * std::log(itercount));
-        double vinv = 1 / (ve + 1);
-        auto bd = [&](const double &x) {
-            return std::pow(ee * x, vinv);
-        };
+        const double ee = u / (2 * std::log(itercount));
+        const double vinv = 1 / (ve + 1);
+
         double ans = 0.0;
         for (int i = 0; i < arr.size();) {
             double v = arr[i];
-            if (std::abs(v) <= bd(++i)) ans += v;
+            if (std::abs(v) <= std::pow(ee * (++i), vinv)) ans += v;
         }
         return ans / arr.size();
     }

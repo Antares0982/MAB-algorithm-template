@@ -56,7 +56,7 @@ namespace mabCutils {
 
         const double *end() const { return &arr_unique_ptr[0] + _len; }
 
-        double avg() const {
+        virtual double avg() const {
             double ans = 0.0;
             for (int i = 0; i < _len; ++i) ans += arr_unique_ptr[i];
             return ans / _len;
@@ -99,7 +99,12 @@ namespace mabCutils {
             presum_unique_ptr[_len] = presum_unique_ptr[_len - 1] + v;
         }
 
+        double avg() const override {
+            return presum_unique_ptr[_len] / _len;
+        }
+
         double getMedianMean(int bins) const {
+            if (bins == 1) return avg();
             int binsizeN = _len / bins;
             auto &pr = updateMedianMeanArray(bins, binsizeN);
             if ((pr.first.size() + pr.second.size()) & 1) return (pr.first.size() > pr.second.size()) ? pr.first.top() : pr.second.top();

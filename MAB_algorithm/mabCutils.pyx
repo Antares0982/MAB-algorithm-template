@@ -23,6 +23,7 @@ cdef extern from "cutils.h" namespace "mabCutils":
         double& operator[](int)
         # extra interface
         double getMedianMean(int)
+        double medianMeanWithMoment(int, double, double)
         void dumpBin(int)
 
     cdef pair[double, int] _calculateCatoniMean(const double, const int, double &, mabarraycpp &, const double)
@@ -79,6 +80,9 @@ cdef class medianOfMeanArray:
 
     def medianMean(self, int bins):
         return self.wrapped.getMedianMean(bins)
+
+    def centralMomentMedianMean(self, int bins, double guess_central, double momentOrder):
+        return self.wrapped.medianMeanWithMoment(bins, guess_central, momentOrder)
 
 # export: c function wrappers
 
