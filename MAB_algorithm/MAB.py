@@ -539,7 +539,7 @@ class medianRobustUCB(MABAlgorithm):
                     len(arr)/2
                 ]))
             ]).astype(int)
-        ans = np.array([arr.medianMean(self.iteration+1, bin(arr))
+        ans = np.array([arr.medianMean(bin(arr))
                         + vp12*np.power(lgtsqp2/len(arr), self.ve/(self.ve+1))
                         for arr in self.reward_history
                         ])

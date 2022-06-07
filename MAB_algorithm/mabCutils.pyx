@@ -22,14 +22,14 @@ cdef extern from "cutils.h" namespace "mabCutils":
         double avg()
         double& operator[](int)
         # extra interface
-        double getMedianMean(int, int)
+        double getMedianMean(int)
         void dumpBin(int)
 
     cdef pair[double, int] _calculateCatoniMean(const double, const int, double &, mabarraycpp &, const double)
 
     cdef double _calculateTruncatedMean(const double, const double, const int, mabarraycpp &)
 
-    cdef double _calculateMedianMean(const int, const int, mabarraycpp &)
+    cdef double _calculateMedianMean(mabarraycpp &, const int)
 
     cdef double heavytail_pdf(const double, const double, const double, const double, double)
     
@@ -77,8 +77,8 @@ cdef class medianOfMeanArray:
     def __setitem__(self, const int key, const double val):
         self.wrapped[key] = val
 
-    def medianMean(self, int iteration, int bins):
-        return self.wrapped.getMedianMean(iteration, bins)
+    def medianMean(self, int bins):
+        return self.wrapped.getMedianMean(bins)
 
 # export: c function wrappers
 
@@ -88,8 +88,8 @@ def calculateCatoniMean(const double v, const int a, double z, mabarray arr, con
 def calculateTruncatedMean(const double u, const double ve, const int itercount, mabarray arr):
     return _calculateTruncatedMean(u, ve, itercount, arr.wrapped)
 
-def calculateMedianMean(const int itercount, const int bins, mabarray arr):
-    return _calculateMedianMean(itercount, bins, arr.wrapped)
+def calculateMedianMean(mabarray arr, const int bins):
+    return _calculateMedianMean(arr.wrapped, bins)
 
 def heavytail_dist_pdf(const double alpha, const double beta, const double coef, const double maxmomentorder, double x):
     return heavytail_pdf(alpha, beta, coef, maxmomentorder, x)

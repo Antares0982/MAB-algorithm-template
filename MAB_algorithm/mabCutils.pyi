@@ -55,7 +55,7 @@ class medianOfMeanArray(object):
     def __len__(self) -> int: ...
     def __getitem__(self, index: int) -> float: ...
     def __setitem__(self, index: int, value: float): ...
-    def medianMean(self, iteration: int, bins: int) -> float: ...
+    def medianMean(self, bins: int) -> float: ...
 
 
 def calculateCatoniMean(
@@ -90,9 +90,8 @@ def calculateTruncatedMean(
 
 
 def calculateMedianMean(
-    iteration: int,
+    arr: mabarray,
     bins: int,
-    arr: mabarray
 ) -> float:
     """
     C++ robust UCB median mean fast evaluation function.

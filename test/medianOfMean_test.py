@@ -20,7 +20,6 @@ class medianOfMean_test(unittest.TestCase):
         totaltime2: float = 0.
 
         for i in range(LENGTH):
-            fake_itercount = max(1, int(i+np.log(i+1)))
             dum = randint(0, 99)/100  # generate random float from 0.00 to 0.99
             # add a random double into array
             arr1.add(dum)
@@ -30,13 +29,13 @@ class medianOfMean_test(unittest.TestCase):
                 np.min([1+16*np.log(i+1), len(arr1)/2]))]).astype(np.int64)
             # compute time for simple medianOfMean
             time0 = time.time()
-            m1 = calculateMedianMean(fake_itercount, bins, arr1)
+            m1 = calculateMedianMean(arr1, bins)
             time1 = time.time()
             totaltime1 += time1-time0
 
             # compute time for medianOfMeanArray
             time0 = time.time()
-            m2 = arr2.medianMean(fake_itercount, bins)
+            m2 = arr2.medianMean(bins)
             time1 = time.time()
             totaltime2 += time1-time0
 

@@ -49,6 +49,21 @@ namespace mabCutils {
 
         return pr;
     }
+
+    double medianOfMeanArrayCpp::medianMeanWithMoment(int bins, double guess_avg, double p) const {
+        int binsize = size() / bins;
+        std::vector<double> medians(bins, 0.);
+        auto ptr = &arr_unique_ptr[0];
+        for (int i = 0; i < bins; ++i) {
+            auto &median = medians[i];
+            for (int j = 0; j < binsize; ++j) {
+                median += std::pow(std::abs(*ptr - guess_avg), p);
+                ++ptr;
+            }
+            median /= binsize;
+        }
+        return findmedian(medians);
+    }
     // begin function def
 
     inline double catonialpha(const double v, const int itercount, const int _size) {
@@ -123,8 +138,7 @@ namespace mabCutils {
         return ans / arr.size();
     }
 
-    double _calculateMedianMean(const int itercount, const int bins, mabarraycpp &arr) {
-        // int k = std::max(1, int(std::floor(std::min(1 + 16 * std::log(itercount), double(arr.size()) / 2))));
+    double _calculateMedianMean(mabarraycpp &arr, const int bins) {
         int N = arr.size() / bins;
         std::vector<double> tmp(bins, 0.0);
 

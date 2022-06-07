@@ -99,13 +99,14 @@ namespace mabCutils {
             presum_unique_ptr[_len] = presum_unique_ptr[_len - 1] + v;
         }
 
-        double getMedianMean(int iteration, int bins) const {
-            // int k = std::max(1, int(std::floor(std::min(1 + 16 * std::log(iteration), double(_len) / 2))));
+        double getMedianMean(int bins) const {
             int binsizeN = _len / bins;
             auto &pr = updateMedianMeanArray(bins, binsizeN);
             if ((pr.first.size() + pr.second.size()) & 1) return (pr.first.size() > pr.second.size()) ? pr.first.top() : pr.second.top();
             return (pr.first.top() + pr.second.top()) / 2.0;
         }
+
+        double medianMeanWithMoment(int bins, double guess_avg, double p) const;
 
     private:
         std::pair<leftQueue, rightQueue> &updateMedianMeanArray(int k, int binsizeN) const;
@@ -118,7 +119,7 @@ namespace mabCutils {
 
     double _calculateTruncatedMean(const double, const double, const int, mabarraycpp &);
 
-    double _calculateMedianMean(const int, const int, mabarraycpp &);
+    double _calculateMedianMean(mabarraycpp &, const int);
 
     // distns utils
     double heavytail_pdf(const double, const double, const double, const double, double);
