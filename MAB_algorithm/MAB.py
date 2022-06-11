@@ -12,6 +12,7 @@ from MAB_algorithm.mabCutils import (calculateCatoniMean, calculateMedianMean,
 __all__ = [
     "MABAlgorithm",
     "SimpleMAB",
+    "UCB1LT",
     "DSEE",
     "truncatedRobustUCB",
     "medianRobustUCB",
@@ -296,6 +297,55 @@ class MABAlgorithm(object):
 
 class SimpleMAB(MABAlgorithm):
     """The simplest algorithm, only chooses the arm with max average reward."""
+
+    def select_arm(self, *args, **kwargs) -> int:
+        if self.iteration < len(self._arms):
+            return self.iteration
+        return np.argmax(self.mean)
+
+
+class UCB1LT(MABAlgorithm):
+    def __init__(self, arms: List['Arm'], zeta: float, u0: float, loggerOn: bool = True) -> None:
+        super().__init__(arms, loggerOn=loggerOn)
+        self._init(zeta, u0)
+
+    def _init(self, zeta: float, u0: float):
+        self.zeta = zeta
+        self.u0 = u0
+
+    @property
+    def zeta(self) -> float:
+        return self.__zeta
+
+    @zeta.setter
+    def zeta(self, _z: float):
+        if _z <= 0:
+            raise ValueError("zeta must be positive")
+        self.__zeta = _z
+
+    @property
+    def u0(self) -> float:
+        return self.__u0
+
+    @u0.setter
+    def u0(self, _u0: float):
+        if _u0 <= 0:
+            raise ValueError("zeta must be positive")
+        self.__u0 = _u0
+
+    def restart(self, zeta: float, u0: float) -> None:
+        super().restart()
+        self._init(zeta, u0)
+
+    def confidence_bound_length(self, i: int) -> float:
+        ans1 = np.sqrt(8*self.zeta*np.log(self.iteration+1)/self._counts[i])
+        if ans1 < self.zeta*self.u0:
+            return ans1
+        return 8*np.log(self.iteration+1)/(self.u0*self._counts[i])
+
+    @property
+    def mean(self) -> List[float]:
+        return np.array([self._reward_sum[i]/s + self.confidence_bound_length(i) for i, s in enumerate(self._counts)])
 
     def select_arm(self, *args, **kwargs) -> int:
         if self.iteration < len(self._arms):

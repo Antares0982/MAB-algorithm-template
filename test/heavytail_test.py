@@ -16,7 +16,6 @@ class heavytail_test(unittest.TestCase):
         arms = [heavyTailArm(i, 5, means[i], 2) for i in range(len(means))]
 
         for i, a in enumerate(arms):
-            a = arms[i]
             time0 = time.time()
             me: float = np.mean(a.draw(_DRAWTIMES))
             time1 = time.time()
