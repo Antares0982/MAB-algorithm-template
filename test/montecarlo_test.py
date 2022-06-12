@@ -20,13 +20,16 @@ class montecarlo_test(unittest.TestCase):
             )
         ]
 
-        data = [None]*len(tests)
-        for i, monte in enumerate(tests):
-            data[i] = monte.to_average_dataframe(
-                monte.run_monte_carlo_to_list(100, 1000, useCores=8)
-            )
+        # data = [None]*len(tests)
+        # for i, monte in enumerate(tests):
+        #     data[i] = monte.to_average_dataframe(
+        #         monte.run_monte_carlo_to_list(100, 1000, useCores=8)
+        #     )
 
-        plotResult(data, [t.algorithm.__name__ for t in tests])
+        # plotResult(data, [t.algorithm.__name__ for t in tests])
+
+        plotResult([x for x in tests], 1000, [
+                   x.algorithm.__name__ for x in tests])
 
 
 if __name__ == "__main__":

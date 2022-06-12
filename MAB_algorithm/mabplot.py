@@ -9,7 +9,7 @@ except ImportError:
     TYPE_CHECKING = False
 
 if TYPE_CHECKING:
-    from MAB_algorithm.MAB import MABAlgorithm
+    from MAB_algorithm.MAB_Abstract import MAB_Runnable
 
 __all__ = [
     "plotResult", "singlePlot"
@@ -18,7 +18,7 @@ __all__ = [
 
 @overload
 def plotResult(
-    algorithms: List['MABAlgorithm'],
+    algorithms: List['MAB_Runnable'],
     number_of_iterations: int,
     algorithm_names: Optional[List[str]] = None,
     ignore_columns: List[str] = []
@@ -27,7 +27,7 @@ def plotResult(
 
 
 def _plot_algorithm(
-    algorithms: List['MABAlgorithm'],
+    algorithms: List['MAB_Runnable'],
     number_of_iterations: int,
     algorithm_names: Optional[List[str]] = None,
     ignore_columns: List[str] = []
@@ -133,7 +133,7 @@ def plotResult(*args, **kwargs):
 
 @overload
 def singlePlot(
-    algorithm: 'MABAlgorithm',
+    algorithm: 'MAB_Runnable',
     number_of_iterations: int,
     algorithm_name: Optional[str] = None,
     use_regret_ub_curve: bool = True,
@@ -143,7 +143,7 @@ def singlePlot(
 
 
 def _plot_single_algorithm(
-    algorithm: 'MABAlgorithm',
+    algorithm: 'MAB_Runnable',
     number_of_iterations: int,
     algorithm_name: Optional[str] = None,
     use_regret_ub_curve: bool = True,

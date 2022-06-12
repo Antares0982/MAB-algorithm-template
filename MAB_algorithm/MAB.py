@@ -4,10 +4,11 @@ from typing import Callable, List, Optional, Union
 import numpy as np
 import pandas as pd
 
-from MAB_algorithm.arm import armList, Arm
-from MAB_algorithm.mabCutils import (calculateCatoniMean, calculateMedianMean,
-                                     calculateTruncatedMean, mabarray, medianOfMeanArray)
-
+from MAB_algorithm.arm import Arm, armList
+from MAB_algorithm.MAB_Abstract import MAB_Runnable
+from MAB_algorithm.mabCutils import (calculateCatoniMean,
+                                     calculateTruncatedMean, mabarray,
+                                     medianOfMeanArray)
 
 __all__ = [
     "MABAlgorithm",
@@ -21,7 +22,7 @@ __all__ = [
 ]
 
 
-class MABAlgorithm(object):
+class MABAlgorithm(MAB_Runnable):
     """
     Base class of a multi-armed bandit algorithm for inheritance.
     Multi-armed bandit - In probability theory, the multi-armed bandit problem

@@ -20,12 +20,13 @@ class ucb1lt_test(unittest.TestCase):
 
         ucb1ltMonteCarlo = MAB_MonteCarlo(UCB1LT, arms, zeta=1, u0=10)
         timeStart = time.time()
-        pdframe = ucb1ltMonteCarlo.to_average_dataframe(
+        ucb1pdframe = ucb1ltMonteCarlo.to_average_dataframe(
             ucb1ltMonteCarlo.run_monte_carlo_to_list(_REPEATTIMES, _DRAWTIMES, useCores=_THREADS))
         timeEnd = time.time()
-        plotResult([pdframe], ["UCB1LT Monte Carlo"])
         print(
             f"Time consumed for {_REPEATTIMES} times Monte Carlo of UCB1LT (T={_DRAWTIMES}, using {_THREADS} threads): {timeEnd-timeStart} seconds")
+
+        plotResult([ucb1pdframe], ["UCB1LT Monte Carlo"])
 
 
 if __name__ == "__main__":

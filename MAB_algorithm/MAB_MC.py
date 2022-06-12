@@ -1,12 +1,13 @@
 import logging
 import time
-from multiprocessing import Pool
+from multiprocessing import Pool, cpu_count
 from typing import Any, Dict, List, Type, TypeVar, Union
 
 import numpy as np
 import pandas as pd
 
 from MAB_algorithm.arm import *
+from MAB_algorithm.MAB_Abstract import MAB_Runnable
 
 try:
     from typing import TYPE_CHECKING
@@ -24,7 +25,7 @@ __all__ = [
 _T = TypeVar("_T")
 
 
-class MAB_MonteCarlo(object):
+class MAB_MonteCarlo(MAB_Runnable):
 
     """
     The class for Monte Carlo experiment of MAB (multi-armed bandit) algorithm.
@@ -293,3 +294,9 @@ class MAB_MonteCarlo(object):
 
     def to_average_dataframe(self, result: List[List[List[Union[float, int]]]]) -> pd.DataFrame:
         return pd.DataFrame(self.to_average(result), columns=self.columnNames)
+
+    def run_to_pdframe(self, number_of_iterations: int, repeatTimes: int = 100) -> "pd.DataFrame":
+        return self.to_average_dataframe(self.run_monte_carlo_to_list(repeatTimes, number_of_iterations, useCores=cpu_count()))
+
+    def gen_regret_ub_curve(self, number_of_iterations: int) -> List[float]:
+        return self.algorithm(self.arms, loggerOn=False, **self.kwargs).gen_regret_ub_curve(number_of_iterations)
