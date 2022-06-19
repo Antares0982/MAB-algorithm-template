@@ -1,7 +1,9 @@
 from typing import List, Tuple, Union, overload
 
 import numpy as np
-from scipy.stats._continuous_distns import truncnorm
+from scipy.special import gamma as func_gamma
+from scipy.special import hyp1f1
+from scipy.stats._continuous_distns import norm, truncnorm
 from scipy.stats._discrete_distns import bernoulli
 
 from MAB_algorithm.distns import heavy_tail, paretoTypeIIDist
@@ -11,6 +13,7 @@ __all__ = [
     "constArm",
     "TruncNormArm",
     "BernoulliArm",
+    "normArm",
     "heavyTailArm",
     "ParetoArm",
     "armList"
@@ -202,6 +205,54 @@ class BernoulliArm(Arm):
 
     def _get_rewards(self, size: int) -> np.ndarray:
         return bernoulli.rvs(self.p, size=size)
+
+
+class normArm(Arm):
+    """
+    An arm that gives reward with respect to normal distrubution.
+
+    Args:
+        mean (:obj:`float`): the mean of arm.
+        sigma (::obj:`float`): the standard deviation of arm.
+    """
+
+    def __init__(self, name: Union[str, int], _mean: float, _sigma: float) -> None:
+        super().__init__(name)
+        self.__mean = _mean
+        self.sigma = _sigma
+
+    @property
+    def mean(self) -> float:
+        return self.__mean
+
+    @property
+    def sigma(self) -> float:
+        return self.__sigma
+
+    @sigma.setter
+    def sigma(self, _s: float):
+        if _s <= 0:
+            raise ValueError("Sigma should be positive")
+        self.__sigma = _s
+
+    def optimal_rewards(self) -> float:
+        return self.mean
+
+    def variance(self) -> float:
+        return norm.stats(loc=self.mean, scale=self.sigma, moments="v")
+
+    def centralMoment(self, atorder: float) -> float:
+        sa = np.power(self.sigma, atorder)
+        a2 = np.power(2, atorder/2)
+        return sa*a2*func_gamma((atorder+1)/2)/np.sqrt(np.pi)
+
+    def originMoment(self, atorder: float) -> float:
+        sa = np.power(self.sigma, atorder)
+        a2 = np.power(2, atorder/2)
+        return sa*a2*func_gamma((atorder+1)/2)*hyp1f1(-atorder/2, -0.5, -self.mean*self.mean/self.sigma/self.sigma/2)/np.sqrt(np.pi)
+
+    def _get_rewards(self, size: int) -> np.ndarray:
+        return norm.rvs(loc=self.mean, scale=self.sigma, size=size)
 
 
 class heavyTailArm(Arm):

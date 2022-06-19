@@ -3,29 +3,32 @@ import sys
 import unittest
 
 
-class heavytail_test(unittest.TestCase):
+class normalArm_test(unittest.TestCase):
     def test_draw(self):
         import time
 
         import numpy as np
-        from MAB_algorithm import heavyTailArm
+        from MAB_algorithm import normArm
 
-        _DRAWTIMES = 10000
+        _DRAWTIMES = 1000000
 
         means = [i*0.05+0.65 for i in range(8)]
-        arms = [heavyTailArm(i, 5, means[i], 2) for i in range(len(means))]
+        arms = [normArm(i, means[i], 2) for i in range(len(means))]
 
         for a in arms:
             time0 = time.time()
-            me: float = np.mean(a.draw(_DRAWTIMES))
+            lst = a.draw(_DRAWTIMES)
             time1 = time.time()
+            me: float = np.mean(lst)
+            ve = np.var(lst)
 
-            info = f"Arm with mean: {a.mean}, \
-                drawn {_DRAWTIMES}, average: {me}, \
+            info = f"Arm with mean: {a.mean}, variance: {a.variance()}, \
+                drawn {_DRAWTIMES}, average: {me}, var: {ve}, \
                 average draw time: {(time1-time0)/_DRAWTIMES}"
             info = ' '.join(info.split())
             print(info)
             self.assertAlmostEqual(a.mean, me, delta=0.03) # may fail
+            self.assertAlmostEqual(a.variance(), ve, delta=0.02) # may fail
 
 
 if __name__ == "__main__":
