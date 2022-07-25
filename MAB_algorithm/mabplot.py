@@ -88,6 +88,9 @@ def _plot_dataframe(
     for col in columnNames:
         if col in ignore_columns:
             continue
+        plt.gca().set_prop_cycle(
+            linestyle=['-', '--', '-.', ':']
+        )
         for i, name in enumerate(algorithm_names):
             plt.plot(alldata[i].get(col), label=name)
         plt.legend(loc='best')

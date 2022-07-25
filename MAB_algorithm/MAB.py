@@ -122,6 +122,52 @@ class MABAlgorithm(MAB_Runnable):
         self.expected_rewards = 0.0
         self._get_optimal_arm_rewards()
 
+    def read_from_pdframe(self, data: pd.DataFrame):
+        """
+        Read data from a :class:`pandas.DataFrame` and initializes to start the 
+        algorithm. If there are other fields to be added into data structure, 
+        implement it in initialize_from_pdframe() before basic data structures 
+        (such as :attr:`collected_rewards`).
+
+        Args:
+            data (:obj:`pandas.DataFrame`): input data.
+        """
+        self.restart()
+
+        self.initialize_from_pdframe(data)
+
+        arm_name_dict = {}
+        for i, arm in enumerate(self._arms):
+            if arm.name in arm_name_dict:
+                raise ValueError("Arm有重复的名称，无法读取数据")
+            arm_name_dict[arm.name] = i
+
+        selected_armname = data['chosen_arm']
+        reward_mem = 0
+
+        self.atSimulationStart(len(selected_armname))
+
+        # simulate the run_simulation
+        for self.iteration, name in enumerate(selected_armname):
+            if name not in arm_name_dict:
+                raise ValueError(f"无法找到该名称的arm:{name}")
+
+            chosen_arm_index = arm_name_dict[name]
+
+            reward = data['collected_rewards'][i]-reward_mem
+            reward_mem = data['collected_rewards'][i]
+
+            self._update_current_states(chosen_arm_index, reward)
+
+            self._update_rewards_info(chosen_arm_index, reward)
+            self._after_draw(chosen_arm_index, reward)
+
+    def initialize_from_pdframe(self, data: pd.DataFrame):
+        """
+        For override.
+        """
+        ...
+
     @property
     def mean(self) -> List[float]:
         """
@@ -268,9 +314,12 @@ class MABAlgorithm(MAB_Runnable):
         if number_of_iterations < 1:
             raise ValueError("Number of iterations must be positive")
 
-        self.atSimulationStart(number_of_iterations)
+        if self.iteration == 0:
+            self.atSimulationStart(number_of_iterations)
 
-        for self.iteration in range(number_of_iterations):
+        start = self.iteration
+
+        for self.iteration in range(start, number_of_iterations):
             chosen_arm_index = self.select_arm()
 
             reward = self._get_reward(chosen_arm_index)
