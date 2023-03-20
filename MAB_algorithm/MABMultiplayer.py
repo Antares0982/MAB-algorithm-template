@@ -66,7 +66,7 @@ class MABMultiplayer(MABAlgorithm):
         Returns:
             :obj:`int`: index of chosen arm.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def run_simulation(self, iterations: int) -> List[dict]:
         if iterations <= 0:

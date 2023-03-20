@@ -58,7 +58,7 @@ class Arm(object):
         This method is intended for overriden by subclasses and should not be called
         externally.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     @overload
     def draw(self) -> float:
@@ -85,16 +85,16 @@ class Arm(object):
         return self._get_rewards(size)
 
     def optimal_rewards(self) -> float:
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def variance(self) -> float:
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def centralMoment(self, atorder: float) -> float:
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def originMoment(self, atorder: float) -> float:
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_dict(self) -> dict:
         """Return the arm values as dictionary with name and probability."""

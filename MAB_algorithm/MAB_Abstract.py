@@ -11,7 +11,7 @@ class MAB_Runnable(object):
     """Abstract class for MAB runnable classes."""
     __slots__ = []
     def run_to_pdframe(self, number_of_iterations: int) -> "pd.DataFrame":
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def gen_regret_ub_curve(self, number_of_iterations: int) -> List[float]:
-        raise NotImplementedError
+        raise NotImplementedError()

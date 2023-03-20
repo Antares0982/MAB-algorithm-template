@@ -231,7 +231,7 @@ class MABAlgorithm(MAB_Runnable):
         Returns:
             :obj:`int`: index of chosen arm.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def _get_reward(self, index: int) -> float:
         return self._arms[index].draw()
