@@ -3,15 +3,15 @@ import sys
 import unittest
 
 
-class robustUCB_test(unittest.TestCase):
+class RobustUCB_test(unittest.TestCase):
     def test_draw(self):
         import time
         from typing import List, Type
 
         import numpy as np
         from MAB_algorithm import (CatoniRobustUCB, MABAlgorithm, armList,
-                                   heavyTailArm, medianRobustUCB, plotResult,
-                                   singlePlot, truncatedRobustUCB)
+                                   heavyTailArm, MedianRobustUCB, plotResult,
+                                   singlePlot, TruncatedRobustUCB)
 
         _MAX_MOMENTORDER = 2
         _ARM_SIZE = 4
@@ -24,8 +24,8 @@ class robustUCB_test(unittest.TestCase):
         print("v=", v)
 
         algos: List[Type[MABAlgorithm]] = [
-            medianRobustUCB,
-            truncatedRobustUCB,
+            MedianRobustUCB,
+            TruncatedRobustUCB,
             CatoniRobustUCB
         ]
         algoname = [x.__name__ for x in algos]

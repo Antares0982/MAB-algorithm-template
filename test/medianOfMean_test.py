@@ -3,7 +3,7 @@ import sys
 import unittest
 
 
-class medianOfMean_test(unittest.TestCase):
+class MedianOfMean_test(unittest.TestCase):
     def test_mean(self):
         import time
         from random import randint

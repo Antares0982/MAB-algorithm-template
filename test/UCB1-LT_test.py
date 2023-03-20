@@ -3,7 +3,7 @@ import sys
 import unittest
 
 
-class ucb1lt_test(unittest.TestCase):
+class UCB1lt_test(unittest.TestCase):
     def test_draw(self):
         import time
 

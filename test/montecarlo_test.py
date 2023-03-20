@@ -3,7 +3,7 @@ import sys
 import unittest
 
 
-class montecarlo_test(unittest.TestCase):
+class Montecarlo_test(unittest.TestCase):
     def test_draw(self):
         from MAB_algorithm.arm import armList, heavyTailArm
         from MAB_algorithm.MAB import DSEE, CatoniRobustUCB

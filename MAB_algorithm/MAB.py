@@ -15,8 +15,8 @@ __all__ = [
     "SimpleMAB",
     "UCB1LT",
     "DSEE",
-    "truncatedRobustUCB",
-    "medianRobustUCB",
+    "TruncatedRobustUCB",
+    "MedianRobustUCB",
     "CatoniRobustUCB",
     "UCB1_HT"
 ]
@@ -194,9 +194,9 @@ class MABAlgorithm(MAB_Runnable):
 
         Args:
             time (:obj:`int`): The time step.
-            delta_i (:obj:`List`): The (non-negative) difference between this arm and the optimal arm.
-                This means that there is at least a zero element in `delta_i`, and all other elements
-                are non-negative.
+            delta_i (:obj:`List`): The (non-negative) difference between this arm 
+                and the optimal arm. This means that there is at least a zero element 
+                in `delta_i`, and all other elements are non-negative.
         """
         ...
 
@@ -355,6 +355,16 @@ class SimpleMAB(MABAlgorithm):
 
 
 class UCB1LT(MABAlgorithm):
+    """
+    UCB1-LT (UCB1 light tailed) is a variant of UCB1 algorithm for light tailed
+    reward distribution. See https://arxiv.org/abs/1112.1768.
+
+    Args:
+        arms (:obj:`List[Arm]`): Bandit arms.
+        u0 (:obj:`float`): `u0` satisfies that for `|u|<=u0`, 
+            the moment generating function `M(u)` exists.
+        zeta (:obj:`float`): Zeta is at least the sup of `M''(u)`.
+    """
     def __init__(self, arms: List['Arm'], zeta: float, u0: float, loggerOn: bool = True) -> None:
         super().__init__(arms, loggerOn=loggerOn)
         self._init(zeta, u0)
@@ -401,6 +411,9 @@ class UCB1LT(MABAlgorithm):
         if self.iteration < len(self._arms):
             return self.iteration
         return np.argmax(self.mean)
+
+    def regret_ub_curve(self, time: int, delta_i: List[float]) -> float:
+        return np.sum([(np.max([self.zeta*32/di/di, 16/(self.u0*di)])*np.log(time)+1+np.pi*np.pi/3)*di for di in delta_i if di > 0])
 
 
 class DSEE(MABAlgorithm):
@@ -497,7 +510,7 @@ class DSEE(MABAlgorithm):
         return int(np.argmax(mean))
 
 
-class truncatedRobustUCB(MABAlgorithm):
+class TruncatedRobustUCB(MABAlgorithm):
     """TODO."""
     __slots__ = [
         "__ve",
@@ -574,7 +587,7 @@ class truncatedRobustUCB(MABAlgorithm):
         ]
 
 
-class medianRobustUCB(MABAlgorithm):
+class MedianRobustUCB(MABAlgorithm):
     """TODO."""
     __slots__ = [
         "__ve",

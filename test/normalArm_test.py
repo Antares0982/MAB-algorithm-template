@@ -3,7 +3,7 @@ import sys
 import unittest
 
 
-class normalArm_test(unittest.TestCase):
+class NormalArm_test(unittest.TestCase):
     def test_draw(self):
         import time
 
